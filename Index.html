@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Myntra Account Review</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#f4f6fa; --surface:#ffffff; --alt:#f0f3f8; --border:#e4e8f0;
+    --kill:#e11d48; --keep:#059669; --warn:#f59e0b; --adv:#0ea5e9; --op:#f97316;
+    --text:#0f172a; --muted:#64748b; --light:#94a3b8;
+    --kill-bg:#fff1f2; --keep-bg:#f0fdf4; --adv-bg:#f0f9ff; --warn-bg:#fffbeb;
+  }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; font-size:14px; }
+
+  /* ── UPLOAD SCREEN ── */
+  #upload-screen {
+    position:fixed; inset:0; background:var(--bg); z-index:1000;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:40px;
+  }
+  .upload-logo { font-size:11px; font-weight:700; color:var(--muted); letter-spacing:3px; text-transform:uppercase; margin-bottom:32px; }
+  .upload-heading { font-size:26px; font-weight:900; letter-spacing:-0.8px; margin-bottom:8px; text-align:center; }
+  .upload-sub { font-size:14px; color:var(--muted); margin-bottom:40px; text-align:center; max-width:480px; line-height:1.6; }
+  .drop-zone {
+    width:100%; max-width:520px; border:2px dashed var(--border); border-radius:16px;
+    padding:48px 40px; text-align:center; cursor:pointer; transition:all 0.2s;
+    background:var(--surface); position:relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color:var(--adv); background:var(--adv-bg); }
+  .drop-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .drop-icon { font-size:40px; margin-bottom:14px; }
+  .drop-title { font-weight:800; font-size:16px; margin-bottom:6px; }
+  .drop-hint { font-size:12px; color:var(--muted); }
+  .upload-schema { margin-top:28px; max-width:520px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; }
+  .upload-schema-title { font-size:10px; font-weight:700; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:10px; }
+  .schema-cols { display:flex; gap:8px; flex-wrap:wrap; }
+  .schema-col { background:var(--alt); color:var(--muted); font-family:'DM Mono',monospace; font-size:11px; padding:3px 10px; border-radius:4px; }
+  .upload-error { color:var(--kill); font-size:13px; margin-top:16px; font-weight:600; display:none; }
+  .upload-loading { color:var(--adv); font-size:13px; margin-top:16px; font-weight:600; display:none; }
+
+  /* ── DASHBOARD (hidden until data loaded) ── */
+  #dashboard { display:none; }
+
+  /* ── HEADER ── */
+  .header {
+    background:var(--surface); border-bottom:1px solid var(--border);
+    padding:0 32px; display:flex; justify-content:space-between; align-items:stretch;
+    position:sticky; top:0; z-index:100; box-shadow:0 1px 8px rgba(0,0,0,.06);
+  }
+  .header-left { padding:12px 0; }
+  .header-eyebrow { font-size:10px; color:var(--muted); letter-spacing:2.5px; text-transform:uppercase; margin-bottom:2px; }
+  .header-name { font-size:17px; font-weight:800; letter-spacing:-.5px; }
+  .header-right { display:flex; align-items:center; gap:12px; }
+  .reload-btn {
+    background:var(--alt); border:1px solid var(--border); color:var(--muted);
+    border-radius:8px; padding:6px 14px; font-size:11px; font-weight:700;
+    cursor:pointer; font-family:inherit; letter-spacing:.5px; transition:all .15s;
+  }
+  .reload-btn:hover { background:var(--border); color:var(--text); }
+  .tabs { display:flex; align-items:stretch; }
+  .tab-btn {
+    background:transparent; border:none; border-bottom:3px solid transparent;
+    color:var(--muted); font-weight:500; font-size:13px; padding:0 18px;
+    cursor:pointer; font-family:inherit; transition:all .15s; white-space:nowrap;
+  }
+  .tab-btn:hover { color:var(--text); }
+  .tab-btn.active { color:var(--text); font-weight:700; border-bottom-color:var(--kill); }
+
+  /* ── CONTENT ── */
+  .content { padding:26px 32px; max-width:1260px; }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+
+  /* ── GRIDS ── */
+  .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:24px; }
+  .grid-2 { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+
+  /* ── KPI CARD ── */
+  .kpi-card { border:1px solid var(--border); border-radius:14px; padding:20px 22px; animation:fadeUp .4s ease both; }
+  .kpi-emoji { font-size:26px; margin-bottom:10px; }
+  .kpi-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:6px; }
+  .kpi-value { font-size:30px; font-weight:900; letter-spacing:-1.5px; line-height:1; }
+  .kpi-sub { font-size:12px; color:var(--muted); margin-top:8px; }
+
+  /* ── INSIGHT CARDS ── */
+  .insight-card {
+    border-radius:14px; padding:20px 22px; display:flex; flex-direction:column; gap:10px;
+    animation:fadeUp .5s ease both; transition:transform .2s, box-shadow .2s;
+  }
+  .insight-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.08); }
+  .insight-emoji { font-size:24px; }
+  .insight-title { font-weight:800; font-size:14px; line-height:1.4; }
+  .insight-body { font-size:13px; color:var(--muted); line-height:1.7; flex:1; }
+  .insight-btn {
+    align-self:flex-start; color:#fff; border:none; border-radius:8px;
+    padding:8px 16px; font-size:12px; font-weight:700; cursor:pointer;
+    font-family:inherit; transition:opacity .15s, transform .15s;
+  }
+  .insight-btn:hover { opacity:.88; transform:translateY(-1px); }
+
+  /* ── SECTION HEADER ── */
+  .section-label { font-size:10px; font-weight:700; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:3px; }
+  .section-title { font-size:15px; font-weight:800; margin-bottom:16px; }
+
+  /* ── CARD ── */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 22px; }
+
+  /* ── ALERT ── */
+  .alert { border-radius:10px; padding:14px 18px; margin-bottom:18px; display:flex; gap:14px; align-items:flex-start; border-left-width:4px; border-left-style:solid; }
+  .alert-icon { font-size:18px; flex-shrink:0; margin-top:2px; }
+  .alert-title { font-weight:800; font-size:13px; margin-bottom:4px; }
+  .alert-body { font-size:12px; color:var(--muted); line-height:1.7; }
+
+  /* ── TABLES ── */
+  .table-wrap { overflow-x:auto; border-radius:12px; border:1px solid var(--border); margin-bottom:18px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  thead tr { border-bottom:2px solid var(--border); }
+  th { text-align:left; padding:10px 12px; font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; white-space:nowrap; }
+  tbody tr { border-bottom:1px solid var(--border); transition:background .1s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:var(--alt) !important; }
+  td { padding:10px 12px; }
+
+  /* ── BADGES ── */
+  .badge { display:inline-block; font-size:10px; font-weight:800; padding:2px 8px; border-radius:4px; letter-spacing:.5px; white-space:nowrap; }
+  .badge-kill  { background:var(--kill-bg); color:var(--kill); }
+  .badge-keep  { background:var(--keep-bg); color:var(--keep); }
+  .badge-warn  { background:var(--warn-bg); color:var(--warn); }
+  .badge-adv   { background:var(--adv-bg);  color:var(--adv);  }
+  .badge-op    { background:#fff7ed;        color:var(--op);   }
+
+  /* ── RETURN RATE COLOUR ── */
+  .rr-critical { color:var(--kill); font-weight:800; font-size:13px; }
+  .rr-high     { color:var(--op);   font-weight:800; font-size:13px; }
+  .rr-medium   { color:var(--warn); font-weight:800; font-size:13px; }
+  .rr-safe     { color:var(--keep); font-weight:800; font-size:13px; }
+
+  /* ── SORT ROW ── */
+  .sort-row { display:flex; gap:8px; align-items:center; margin-bottom:14px; }
+  .sort-label { font-size:11px; color:var(--muted); }
+  .sort-btn { background:var(--surface); border:1px solid var(--border); color:var(--muted); border-radius:6px; padding:4px 12px; font-size:11px; font-weight:600; cursor:pointer; font-family:inherit; transition:all .15s; }
+  .sort-btn.active { background:var(--kill); color:#fff; border-color:var(--kill); }
+
+  /* ── ACTIONS ── */
+  .action-item { background:var(--surface); border:1px solid var(--border); border-left-width:4px; border-left-style:solid; border-radius:10px; padding:14px 18px; display:flex; gap:14px; align-items:flex-start; margin-bottom:10px; animation:fadeUp .3s ease both; }
+  .action-num { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:13px; flex-shrink:0; }
+  .action-badges { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+  .action-icon { font-size:15px; }
+  .action-text { font-size:13px; line-height:1.7; flex:1; }
+  .action-saves { min-width:110px; text-align:right; flex-shrink:0; }
+  .action-saves-label { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+  .action-saves-val { font-size:12px; font-weight:800; margin-top:2px; }
+
+  /* ── CHART ── */
+  .chart-wrap { position:relative; margin-top:8px; }
+
+  /* ── PROGRESS BAR ── */
+  .bar-track { height:5px; background:var(--alt); border-radius:3px; overflow:hidden; margin:5px 0 2px; }
+  .bar-fill   { height:100%; border-radius:3px; }
+
+  /* ── DNA GRID ── */
+  .dna-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+  .dna-item { background:var(--surface); border:1px solid #fecdd3; border-radius:8px; padding:12px 14px; display:flex; gap:10px; }
+  .dna-title { font-weight:700; font-size:12px; }
+  .dna-body  { font-size:11px; color:var(--muted); line-height:1.6; margin-top:2px; }
+
+  /* ── ANIMATION ── */
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ── RESPONSIVE ── */
+  @media(max-width:900px){
+    .header{flex-direction:column;padding:12px 16px 0}
+    .tabs{overflow-x:auto}
+    .content{padding:18px 16px}
+    .grid-3,.grid-2{grid-template-columns:1fr}
+    .dna-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     UPLOAD SCREEN
+══════════════════════════════════════════ -->
+<div id="upload-screen">
+  <div class="upload-logo">Myntra Account Intelligence</div>
+  <h1 class="upload-heading">Upload your data export</h1>
+  <p class="upload-sub">Drop the CSV file exported from your Supabase account dashboard query. We'll parse it and populate the full analysis instantly.</p>
+
+  <div class="drop-zone" id="drop-zone">
+    <input type="file" id="csv-input" accept=".csv">
+    <div class="drop-icon">📂</div>
+    <div class="drop-title">Drop CSV here or click to browse</div>
+    <div class="drop-hint">Expected format: section, metric, value_text, value_num</div>
+  </div>
+
+  <div class="upload-schema">
+    <div class="upload-schema-title">Required columns in CSV</div>
+    <div class="schema-cols">
+      <span class="schema-col">section</span>
+      <span class="schema-col">metric</span>
+      <span class="schema-col">value_text</span>
+      <span class="schema-col">value_num</span>
+    </div>
+  </div>
+
+  <div class="upload-error" id="upload-error">⚠ Could not parse the file. Please check the format and try again.</div>
+  <div class="upload-loading" id="upload-loading">⏳ Parsing data...</div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     DASHBOARD
+══════════════════════════════════════════ -->
+<div id="dashboard">
+
+  <header class="header">
+    <div class="header-left">
+      <div class="header-eyebrow" id="hdr-eyebrow">Myntra Account Review</div>
+      <div class="header-name">Account Manager View</div>
+    </div>
+    <div class="header-right">
+      <button class="reload-btn" onclick="resetDashboard()">↩ Upload new file</button>
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="brief">Account Brief</button>
+        <button class="tab-btn" data-tab="kill">Kill List</button>
+        <button class="tab-btn" data-tab="advertise">Advertise Now</button>
+        <button class="tab-btn" data-tab="actions">10 Actions</button>
+      </nav>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- BRIEF -->
+    <div class="tab-panel active" id="panel-brief">
+      <div style="margin-bottom:22px">
+        <div style="font-size:17px;font-weight:800;margin-bottom:5px" id="brief-heading">Here's what we found in your data.</div>
+        <div style="font-size:13px;color:var(--muted)" id="brief-sub">Loading...</div>
+      </div>
+      <div class="grid-3" id="brief-kpis"></div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">What we found — click any card to go deeper</div>
+      <div class="grid-2" id="brief-cards"></div>
+    </div>
+
+    <!-- KILL LIST -->
+    <div class="tab-panel" id="panel-kill">
+      <div class="alert" style="background:var(--kill-bg);border-color:#fecdd3;border-left-color:var(--kill)">
+        <div class="alert-icon">⚠️</div>
+        <div>
+          <div class="alert-title" style="color:var(--kill)">35% Rule — any SKU above this threshold is unprofitable regardless of sales volume</div>
+          <div class="alert-body">On Myntra, one return costs ~₹230 in penalties. The styles below are all above the kill threshold. Styles marked <strong>FIX OPS</strong> have an operational root cause — the product is fine, the warehouse process is broken.</div>
+        </div>
+      </div>
+      <div class="sort-row">
+        <span class="sort-label">Sort by:</span>
+        <button class="sort-btn active" onclick="sortKill('rr',this)">Return Rate</button>
+        <button class="sort-btn" onclick="sortKill('cost',this)">Total Cost</button>
+        <button class="sort-btn" onclick="sortKill('metric',this)">Style ID</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead style="background:var(--kill-bg)">
+            <tr>
+              <th style="color:var(--kill)">Style ID</th>
+              <th style="color:var(--kill)">Return %</th>
+              <th style="color:var(--kill)">Total Cost</th>
+              <th style="color:var(--kill)">Action</th>
+            </tr>
+          </thead>
+          <tbody id="kill-tbody"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="section-label">Return rate per Kill List style</div>
+        <div class="section-title">All bars above the dashed 35% threshold line</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="kill-chart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ADVERTISE NOW -->
+    <div class="tab-panel" id="panel-advertise">
+      <div class="alert" style="background:var(--adv-bg);border-color:#bae6fd;border-left-color:var(--adv)">
+        <div class="alert-icon">📢</div>
+        <div>
+          <div class="alert-title" style="color:var(--adv)">Never advertise a style with return rate above 35%</div>
+          <div class="alert-body">Every return on an advertised order amplifies your loss — you paid to acquire the customer AND pay the penalty. The styles below are your safe advertising pool ranked by priority.</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead style="background:var(--adv-bg)">
+            <tr>
+              <th style="color:var(--adv)">Priority</th>
+              <th style="color:var(--adv)">Style ID</th>
+              <th style="color:var(--adv)">Orders</th>
+              <th style="color:var(--adv)">Return %</th>
+              <th style="color:var(--adv)">Recommendation</th>
+            </tr>
+          </thead>
+          <tbody id="adv-tbody"></tbody>
+        </table>
+      </div>
+      <div class="card" style="background:var(--kill-bg);border-color:#fecdd3">
+        <div class="section-label" style="color:var(--kill)">⛔ Do Not Advertise (currently)</div>
+        <div class="dna-grid" id="dna-grid"></div>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="tab-panel" id="panel-actions">
+      <div class="card" style="margin-bottom:18px">
+        <p style="color:var(--muted);font-size:13px;line-height:1.7">Sorted by impact. You will implement 3–5. Make sure it's the top 3. <strong style="color:var(--text)">Actions 1–4 are non-negotiable</strong> — every day you delay costs money. Actions 5–7 are revenue upside. Actions 8–10 are preventive.</p>
+      </div>
+      <div id="actions-list"></div>
+    </div>
+
+  </div><!-- .content -->
+</div><!-- #dashboard -->
+
+<script>
+/* ═══════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════ */
+const fmt   = n  => '₹' + Math.round(n).toLocaleString('en-IN');
+const fmtL  = n  => { const l = n / 100000; return '₹' + (l >= 10 ? Math.round(l) : l.toFixed(1)) + 'L'; }
+const rrCls = rr => rr >= 50 ? 'rr-critical' : rr >= 35 ? 'rr-high' : rr >= 20 ? 'rr-medium' : 'rr-safe';
+
+// Parse "KEY: VALUE" patterns from value_text
+const extract = (str, key) => {
+  const m = str.match(new RegExp(key + '[:\\s]+([\\d\\.]+)', 'i'));
+  return m ? parseFloat(m[1]) : null;
+};
+const extractStr = (str, key) => {
+  const m = str.match(new RegExp(key + '[:\\s]+([^|]+)', 'i'));
+  return m ? m[1].trim() : null;
+};
+
+/* ═══════════════════════════════════════════════
+   UPLOAD / DRAG-DROP
+═══════════════════════════════════════════════ */
+const dropZone  = document.getElementById('drop-zone');
+const csvInput  = document.getElementById('csv-input');
+const errEl     = document.getElementById('upload-error');
+const loadEl    = document.getElementById('upload-loading');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+});
+csvInput.addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+
+function processFile(file) {
+  errEl.style.display = 'none';
+  loadEl.style.display = 'block';
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: result => {
+      loadEl.style.display = 'none';
+      const rows = result.data;
+      if (!rows.length || !rows[0].section) {
+        errEl.style.display = 'block'; return;
+      }
+      try {
+        buildDashboard(rows, file.name);
+        document.getElementById('upload-screen').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+      } catch(err) {
+        console.error(err);
+        errEl.textContent = '⚠ Parsing error: ' + err.message;
+        errEl.style.display = 'block';
+      }
+    },
+    error: () => { loadEl.style.display='none'; errEl.style.display='block'; }
+  });
+}
+
+function resetDashboard() {
+  document.getElementById('upload-screen').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('csv-input').value = '';
+  if (window._killChart) { window._killChart.destroy(); window._killChart = null; }
+}
+
+/* ═══════════════════════════════════════════════
+   TAB SWITCHING
+═══════════════════════════════════════════════ */
+function goTab(id) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const btn = document.querySelector(`[data-tab="${id}"]`);
+  if (btn) btn.classList.add('active');
+  const panel = document.getElementById(`panel-${id}`);
+  if (panel) panel.classList.add('active');
+  if (id === 'kill' && window._killData && !window._killChart) drawKillChart();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => goTab(b.dataset.tab)));
+
+/* ═══════════════════════════════════════════════
+   CORE PARSER — turns raw CSV rows into data objects
+═══════════════════════════════════════════════ */
+function buildDashboard(rows, filename) {
+
+  /* Group rows by section */
+  const bySection = {};
+  rows.forEach(r => {
+    const s = (r.section || '').trim();
+    if (!bySection[s]) bySection[s] = [];
+    bySection[s].push(r);
+  });
+
+  /* ── HEADLINE ── */
+  const headlineMap = {};
+  (bySection['1_HEADLINE'] || []).forEach(r => {
+    headlineMap[r.metric] = isNaN(r.value_num) ? parseFloat(r.value_text) : parseFloat(r.value_num);
+  });
+  const totalOrders      = headlineMap['total_orders']             || 0;
+  const grossRevenue     = headlineMap['gross_revenue']            || 0;
+  const returnPenalty    = headlineMap['estimated_return_penalty'] || 0;
+  const ordersReturned   = headlineMap['orders_with_return']       || 0;
+  const totalCancelled   = headlineMap['total_cancelled']          || 0;
+  const totalRTO         = headlineMap['total_rto_events']         || 0;
+  const cancelRate       = headlineMap['cancellation_rate_pct']    || 0;
+
+  /* ── STYLE PORTFOLIO ── */
+  const portfolio = (bySection['2_STYLE_PORTFOLIO'] || []).map(r => ({
+    styleId: r.metric,
+    status:  (r.value_text || '').trim(),
+    orders:  parseFloat(r.value_num) || 0,
+  }));
+  const killCount    = portfolio.filter(s => s.status === 'KILL LIST').length;
+  const starCount    = portfolio.filter(s => s.status === 'STAR \u2014 ADVERTISE' || s.status === 'STAR — ADVERTISE').length;
+  const safeAdvCount = portfolio.filter(s => s.status === 'SAFE \u2014 ADVERTISE' || s.status === 'SAFE — ADVERTISE').length;
+  const advReadyCount = starCount + safeAdvCount;
+
+  /* ── KILL LIST ── */
+  // value_text: "DELIST / AUDIT | RR: 66.7% | Cost: Rs 4635"
+  const killData = (bySection['3_KILL_LIST'] || []).map(r => {
+    const vt     = r.value_text || '';
+    const parts  = vt.split('|').map(p => p.trim());
+    const action = parts[0] || 'REVIEW & ACTION';
+    const rrStr  = parts.find(p => p.startsWith('RR:')) || '';
+    const costStr= parts.find(p => p.startsWith('Cost:')) || '';
+    const rr     = parseFloat(rrStr.replace(/[^0-9.]/g,'')) || parseFloat(r.value_num) || 0;
+    const cost   = parseFloat(costStr.replace(/[^0-9]/g,'')) || 0;
+    return { styleId: r.metric, action: action.trim(), rr, cost };
+  });
+
+  /* ── ADVERTISE READY ── */
+  // value_text: "LOW RISK — advertise aggressively | Orders: 214 | RR: 9.8%"
+  const advData = (bySection['4_ADVERTISE_READY'] || []).map(r => {
+    const vt     = r.value_text || '';
+    const parts  = vt.split('|').map(p => p.trim());
+    const rec    = parts[0] || '';
+    const ordStr = parts.find(p => p.toLowerCase().startsWith('orders:')) || '';
+    const rrStr  = parts.find(p => p.toLowerCase().startsWith('rr:')) || '';
+    const orders = parseFloat(ordStr.replace(/[^0-9]/g,'')) || 0;
+    const rr     = parseFloat(rrStr.replace(/[^0-9.]/g,'')) || 0;
+    const priority = parseFloat(r.value_num) || 999;
+    return { styleId: r.metric, rec, orders, rr, priority };
+  }).sort((a,b) => a.priority - b.priority);
+
+  /* ── CANCELLATIONS ── */
+  const cancelData = (bySection['5_CANCELLATIONS'] || []).map(r => {
+    const vt  = r.value_text || '';
+    const cnt = parseFloat(r.value_num) || 0;
+    const lostM = vt.match(/Lost: Rs ([\d,]+)/i);
+    const lost  = lostM ? parseFloat(lostM[1].replace(/,/g,'')) : 0;
+    return { reason: r.metric, count: cnt, lost };
+  });
+
+  /* ── GEOGRAPHY ── */
+  const geoData = (bySection['6_GEOGRAPHY'] || []).map(r => {
+    const vt      = r.value_text || '';
+    const ordM    = vt.match(/^([\d,]+)\s+orders/);
+    const retM    = vt.match(/([\d,]+)\s+returns\s*\(([\d.]+)%\)/);
+    const rtoM    = vt.match(/RTO rate:\s*([\d.]+)%/i);
+    return {
+      state:   r.metric,
+      returns: parseFloat(r.value_num) || 0,
+      orders:  ordM  ? parseFloat(ordM[1].replace(/,/g,''))  : 0,
+      retRate: retM  ? parseFloat(retM[2])  : 0,
+      rtoRate: rtoM  ? parseFloat(rtoM[1])  : 0,
+    };
+  });
+
+  /* ── BRAND METRICS ── */
+  const brandData = (bySection['7_BRAND_METRICS'] || []).map(r => {
+    const vt    = r.value_text || '';
+    const ordM  = vt.match(/^([\d,]+)\s+orders/);
+    const revM  = vt.match(/Revenue: Rs ([\d,]+)/i);
+    const penM  = vt.match(/Penalty: Rs ([\d,]+)/i);
+    return {
+      brand:   r.metric,
+      rr:      parseFloat(r.value_num) || 0,
+      orders:  ordM ? parseFloat(ordM[1].replace(/,/g,'')) : 0,
+      revenue: revM ? parseFloat(revM[1].replace(/,/g,'')) : 0,
+      penalty: penM ? parseFloat(penM[1].replace(/,/g,'')) : 0,
+    };
+  });
+
+  /* ── RETURN DATE TREND ── */
+  const retTrend = (bySection['9_RETURN_DATE_TREND'] || []).map(r => {
+    const vt     = r.value_text || '';
+    const penM   = vt.match(/Penalty: Rs ([\d,]+)/i);
+    const clsM   = vt.match(/\|\s*(SPIKE|NORMAL)\s*\|/i);
+    return {
+      date:    r.metric,
+      returns: parseFloat(r.value_num) || 0,
+      penalty: penM ? parseFloat(penM[1].replace(/,/g,'')) : 0,
+      spike:   clsM ? clsM[1].toUpperCase() === 'SPIKE' : false,
+    };
+  }).sort((a,b) => a.date.localeCompare(b.date));
+
+  /* ── SAVE GLOBALS ── */
+  window._killData = killData;
+  window._advData  = advData;
+
+  /* ── DERIVE FILENAME META ── */
+  const dateMatch = filename.match(/(\d{4}-\d{2}-\d{2})/g);
+  const sellerMatch = filename.match(/(\d{5,})/);
+  const dateRange = dateMatch ? dateMatch.join(' to ') : 'Data period';
+  const seller    = sellerMatch ? 'Seller #' + sellerMatch[0] : '';
+  document.getElementById('hdr-eyebrow').textContent = [seller, dateRange].filter(Boolean).join(' · ');
+
+  /* ─────────────────────────────────
+     RENDER: ACCOUNT BRIEF
+  ───────────────────────────────── */
+  document.getElementById('brief-heading').textContent = 'Here\'s what we found in your data.';
+  document.getElementById('brief-sub').textContent =
+    `We analysed ${totalOrders.toLocaleString('en-IN')} orders across this period. This usually takes days. Here it is in one place.`;
+
+  const totalCostApprox = returnPenalty; // penalty from CSV (primary available figure)
+  const kpis = [
+    { emoji:'💰', label:'Revenue earned',     value: fmtL(grossRevenue), sub:'Across all orders this period',   col:'#059669', bg:'#f0fdf4' },
+    { emoji:'📉', label:'Return penalties',   value: fmt(returnPenalty), sub:`${ordersReturned.toLocaleString()} returns × ₹230`, col:'var(--kill)', bg:'var(--kill-bg)' },
+    { emoji:'🚀', label:'Ready to advertise', value: `${advData.length} styles`,  sub:'Safe to run ads on right now', col:'var(--adv)',  bg:'var(--adv-bg)' },
+  ];
+  document.getElementById('brief-kpis').innerHTML = kpis.map((k,i) => `
+    <div class="kpi-card" style="background:${k.bg};animation-delay:${i*.06}s">
+      <div class="kpi-emoji">${k.emoji}</div>
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value" style="color:${k.col}">${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+
+  // Top kill list style by cost
+  const topKill = [...killData].sort((a,b)=>b.cost-a.cost)[0];
+  // Top advertise style
+  const topAdv  = advData[0];
+  // Top cancel reason
+  const topCancel = cancelData.sort((a,b)=>b.count-a.count)[0];
+
+  const cards = [
+    {
+      emoji:'⛔', col:'var(--kill)', bg:'var(--kill-bg)', border:'#fecdd3',
+      title: `${killData.length} products are costing you money on every sale`,
+      body:  `Some of your styles have return rates above 35%. For every 3 orders, at least 1 comes back — and Myntra charges ₹230 each time. ${topKill ? `The worst offender (Style ${topKill.styleId}) has a ${topKill.rr}% return rate.` : ''} We've identified exactly which ones and what to do.`,
+      cta:'See Kill List →', tab:'kill'
+    },
+    {
+      emoji:'🚀', col:'var(--adv)', bg:'var(--adv-bg)', border:'#bae6fd',
+      title: `${advData.length} styles are ready to advertise right now`,
+      body:  `These styles have proven sales and low return rates. Running ads on them is low risk and high upside. ${topAdv ? `Start with Style ${topAdv.styleId} — ${topAdv.rr}% return rate and ${topAdv.orders.toLocaleString()} orders.` : ''} We've ranked them by priority.`,
+      cta:'See Ad Recommendations →', tab:'advertise'
+    },
+    {
+      emoji:'📦', col:'var(--op)', bg:'#fff7ed', border:'#fed7aa',
+      title: `${Math.round(cancelRate)}% of all orders were cancelled this period`,
+      body:  `${totalCancelled.toLocaleString()} cancelled orders — almost certainly more than your customer returns. ${topCancel && topCancel.reason !== 'No reason recorded' ? `Top stated reason: "${topCancel.reason}" (${topCancel.count.toLocaleString()} orders).` : 'Most cancellations had no reason recorded.'} This is the hidden revenue leak that doesn't show up in returns reports.`,
+      cta:'See the 10 Actions →', tab:'actions'
+    },
+    {
+      emoji:'✅', col:'var(--keep)', bg:'var(--keep-bg)', border:'#bbf7d0',
+      title: `${advReadyCount} styles are in the safe zone — protect and scale them`,
+      body:  `${starCount} styles are flagged as STAR performers (low return rate, high volume). ${safeAdvCount} more are in the SAFE tier. These are your core business. Don't cut budgets on them while fixing the Kill List styles.`,
+      cta:'See Full Analysis →', tab:'kill'
+    },
+  ];
+  document.getElementById('brief-cards').innerHTML = cards.map((c,i) => `
+    <div class="insight-card" style="background:${c.bg};border:1px solid ${c.border};animation-delay:${.2+i*.05}s">
+      <div class="insight-emoji">${c.emoji}</div>
+      <div class="insight-title">${c.title}</div>
+      <div class="insight-body">${c.body}</div>
+      <button class="insight-btn" style="background:${c.col}" onclick="goTab('${c.tab}')">${c.cta}</button>
+    </div>`).join('');
+
+  /* ─────────────────────────────────
+     RENDER: KILL TABLE
+  ───────────────────────────────── */
+  renderKillTable(killData);
+
+  /* ─────────────────────────────────
+     RENDER: ADVERTISE TABLE
+  ───────────────────────────────── */
+  document.getElementById('adv-tbody').innerHTML = advData.slice(0,20).map((s,i) => {
+    const recLower = s.rec.toLowerCase();
+    const tier = recLower.includes('low risk')  ? ['LOW RISK','var(--keep)','var(--keep-bg)']
+               : recLower.includes('safe')      ? ['SAFE','var(--adv)','var(--adv-bg)']
+               : recLower.includes('watch')     ? ['WATCH','var(--warn)','var(--warn-bg)']
+               :                                  ['REVIEW','var(--muted)','var(--alt)'];
+    const rowBg = i%2===0 ? '#f8fbff' : '#fff';
+    return `
+      <tr style="background:${rowBg}">
+        <td style="font-weight:800;color:var(--muted);font-size:11px">#${i+1}</td>
+        <td style="font-family:'DM Mono',monospace;font-weight:700;font-size:12px">${s.styleId}</td>
+        <td style="font-weight:800">${s.orders.toLocaleString('en-IN')}</td>
+        <td><span class="rr-value ${rrCls(s.rr)}">${s.rr}%</span></td>
+        <td>
+          <span class="badge" style="background:${tier[2]};color:${tier[1]}">${tier[0]}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:6px">${s.rec.split('\u2014')[0].trim().replace(/—.*$/,'').trim()}</span>
+        </td>
+      </tr>`;
+  }).join('');
+
+  // DNA (do not advertise) — styles in kill list with highest cost
+  const dnaItems = [...killData].sort((a,b)=>b.cost-a.cost).slice(0,4);
+  document.getElementById('dna-grid').innerHTML = dnaItems.map(d => `
+    <div class="dna-item">
+      <div style="font-size:18px;flex-shrink:0">⛔</div>
+      <div>
+        <div class="dna-title">${d.styleId}</div>
+        <div class="dna-body">${d.rr}% return rate — ${d.action}. Do not advertise until resolved.</div>
+      </div>
+    </div>`).join('');
+
+  /* ─────────────────────────────────
+     RENDER: 10 ACTIONS (auto-generated)
+  ───────────────────────────────── */
+  const sortedKill = [...killData].sort((a,b)=>b.cost-a.cost);
+  const sortedAdv  = [...advData].sort((a,b)=>a.priority-b.priority);
+
+  const actions = [];
+
+  // Actions from kill list — up to 4 items
+  sortedKill.slice(0,4).forEach((s,i) => {
+    const isFix = s.action.toLowerCase().includes('fix') || s.action.toLowerCase().includes('ops');
+    const icon  = isFix ? '📦' : s.action.toLowerCase().includes('delist') ? '⛔' : '🔍';
+    const pri   = i < 2 ? 'CRITICAL' : 'HIGH';
+    const col   = i < 2 ? 'var(--kill)' : 'var(--warn)';
+    const numBg = i < 2 ? '#fef2f2'     : '#fffbeb';
+    actions.push({
+      n: actions.length+1, icon, pri, col, numBg,
+      text: `${s.action}: Style ${s.styleId} — ${s.rr}% return rate. ${
+        isFix ? 'Root cause is operational (wrong product picked). Fix warehouse bin segregation and implement barcode scanning at pack station.'
+               : s.action.toLowerCase().includes('delist') ? 'High return rate driven by product or listing issue. Delist or reshoot before restocking.'
+               : 'Review return reasons for this style and take corrective action before next dispatch.'
+      }`,
+      saves: fmt(s.cost),
+    });
+  });
+
+  // Ad actions — top 3 safe styles
+  sortedAdv.slice(0,3).forEach((s,i) => {
+    actions.push({
+      n: actions.length+1, icon:'🚀', pri:'HIGH', col:'var(--adv)', numBg:'#f0f9ff',
+      text: `Run ads on Style ${s.styleId} — ${s.rr}% return rate, ${s.orders.toLocaleString('en-IN')} orders. ${
+        s.rr < 10 ? 'Lowest-risk style in the catalog for ad spend.'
+                  : 'Proven demand + acceptable return rate — safe to scale with paid traffic.'
+      }`,
+      saves: 'Revenue upside',
+    });
+  });
+
+  // Cancellation action
+  if (totalCancelled > 0) {
+    actions.push({
+      n: actions.length+1, icon:'📋', pri:'MEDIUM', col:'var(--warn)', numBg:'#fffbeb',
+      text: `Investigate ${totalCancelled.toLocaleString('en-IN')} cancellations — ${cancelRate}% of all orders placed were cancelled. Audit the top cancellation reasons and check if listing images are creating expectation gaps before the customer cancels.`,
+      saves: 'Prevents revenue leak',
+    });
+  }
+
+  // RTO action
+  if (totalRTO > 0) {
+    actions.push({
+      n: actions.length+1, icon:'💳', pri:'MEDIUM', col:'var(--muted)', numBg:'#f8fafc',
+      text: `Add prepaid discount (3–5%) on high-RTO styles — ${totalRTO.toLocaleString('en-IN')} RTOs at ₹230 each = ${fmt(totalRTO*230)} in logistics waste. COD orders produce 3–5× the RTO rate of prepaid orders.`,
+      saves: fmt(totalRTO*230*0.4),
+    });
+  }
+
+  // Trim to max 10
+  const top10 = actions.slice(0,10);
+  document.getElementById('actions-list').innerHTML = top10.map((a,i) => `
+    <div class="action-item" style="border-left-color:${a.col};animation-delay:${i*.04}s">
+      <div class="action-num" style="background:${a.numBg};color:${a.col}">${a.n}</div>
+      <div class="action-text" style="flex:1">
+        <div class="action-badges">
+          <span class="action-icon">${a.icon}</span>
+          <span class="badge" style="background:${a.numBg};color:${a.col}">${a.pri}</span>
+        </div>
+        ${a.text}
+      </div>
+      <div class="action-saves">
+        <div class="action-saves-label">Saves / Impact</div>
+        <div class="action-saves-val" style="color:${a.col}">${a.saves}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   KILL TABLE SORT
+═══════════════════════════════════════════════ */
+function renderKillTable(data) {
+  document.getElementById('kill-tbody').innerHTML = data.map((s,i) => {
+    const action = s.action;
+    const isOps  = action.toLowerCase().includes('fix') || action.toLowerCase().includes('ops');
+    const isDel  = action.toLowerCase().includes('delist');
+    const badge  = isOps  ? `<span class="badge badge-adv">FIX OPS</span>`
+                 : isDel  ? `<span class="badge badge-kill">${action}</span>`
+                 :          `<span class="badge badge-warn">${action}</span>`;
+    const rowBg  = i%2===0 ? '#fff8f8' : '#fff';
+    return `
+      <tr style="background:${rowBg}">
+        <td style="font-family:'DM Mono',monospace;font-weight:700;font-size:12px">${s.styleId}</td>
+        <td><span class="${rrCls(s.rr)}">${s.rr}%</span></td>
+        <td style="font-weight:700;color:var(--kill);font-size:12px">${fmt(s.cost)}</td>
+        <td>${badge}</td>
+      </tr>`;
+  }).join('');
+}
+
+function sortKill(key, btn) {
+  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const sorted = [...window._killData].sort((a,b)=>{
+    if (key==='rr')     return b.rr   - a.rr;
+    if (key==='cost')   return b.cost - a.cost;
+    if (key==='metric') return a.styleId.localeCompare(b.styleId);
+    return 0;
+  });
+  renderKillTable(sorted);
+  // Redraw chart with new order
+  if (window._killChart) { window._killChart.destroy(); window._killChart = null; }
+  window._killData = sorted;
+  drawKillChart();
+}
+
+/* ═══════════════════════════════════════════════
+   KILL CHART
+═══════════════════════════════════════════════ */
+function drawKillChart() {
+  if (!window._killData) return;
+  const ctx  = document.getElementById('kill-chart').getContext('2d');
+  const data = window._killData;
+  window._killChart = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: data.map(s => s.styleId.slice(-6)),
+      datasets:[{
+        label:'Return Rate %',
+        data: data.map(s => s.rr),
+        backgroundColor: data.map(s => s.rr>=70?'#e11d48':s.rr>=50?'#f97316':'#f59e0b'),
+        borderRadius:4,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx=>`Return rate: ${ctx.raw}%` } } },
+      scales:{
+        x:{ grid:{display:false}, ticks:{color:'#64748b',font:{size:10}} },
+        y:{ grid:{color:'#e4e8f0'}, ticks:{color:'#64748b',font:{size:10},callback:v=>v+'%'}, max:110 }
+      }
+    },
+    plugins:[{
+      id:'threshold',
+      afterDraw(chart){
+        const {ctx, chartArea:{left,right}, scales:{y}} = chart;
+        const yPos = y.getPixelForValue(35);
+        ctx.save();
+        ctx.setLineDash([6,4]);
+        ctx.strokeStyle='#e11d48'; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.moveTo(left,yPos); ctx.lineTo(right,yPos); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle='#e11d48'; ctx.font='bold 10px DM Sans';
+        ctx.fillText('35% Kill Threshold', left+4, yPos-5);
+        ctx.restore();
+      }
+    }]
+  });
+}
+</script>
+</body>
+</html>
