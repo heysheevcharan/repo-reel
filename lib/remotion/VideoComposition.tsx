@@ -21,9 +21,9 @@ export type VideoProps = {
   theme?: ProjectTheme
 }
 
-export const TRANSITION_FRAMES = 8
+// Keep in sync with LAUNCH_TRANSITION_FRAMES in duration.ts
+export const TRANSITION_FRAMES = 2
 
-// Derive per-scene palette from theme; problem scene always stays red
 function buildPalette(theme?: ProjectTheme) {
   const brand = theme?.primaryColor ?? '#a855f7'
   const dim = (c: string) => `${c}40`
@@ -43,24 +43,38 @@ const p = (id: string, theme?: ProjectTheme) => {
   return (pal as any)[id] ?? pal.fallback
 }
 
-// ─── AnimatedBackground ──────────────────────────────────────────────────────
+// ─── FlashCut — bright overlay at scene entry ────────────────────────────────
 
-function AnimatedBackground({ sceneId, theme }: { sceneId: string; theme?: ProjectTheme }) {
+function FlashCut({ color = '#ffffff', accent }: { color?: string; accent?: string }) {
   const frame = useCurrentFrame()
-  const { durationInFrames } = useVideoConfig()
+  const flashOpacity = interpolate(frame, [0, 3], [0.85, 0], {
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+  })
+  if (flashOpacity <= 0) return null
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 100, pointerEvents: 'none',
+      backgroundColor: accent ?? color,
+      opacity: flashOpacity,
+    }} />
+  )
+}
+
+// ─── MicroMotionBg — breathing radial glow background ────────────────────────
+
+function MicroMotionBg({ sceneId, theme }: { sceneId: string; theme?: ProjectTheme }) {
+  const frame = useCurrentFrame()
   const pal = p(sceneId, theme)
   const bg = theme?.backgroundColor ?? '#050505'
   const dotColor = theme?.isDark === false ? '#00000008' : '#ffffff0a'
 
-  const glowX = interpolate(frame, [0, durationInFrames], [35, 65], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-  })
-  const glowY = interpolate(frame, [0, durationInFrames], [40, 60], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-  })
+  const breathe = 1 + 0.018 * Math.sin(frame * 0.09)
+  const drift = Math.sin(frame * 0.04) * 6
+  const glowX = 50 + drift
+  const glowY = 50 + Math.sin(frame * 0.055) * 5
 
   return (
-    <AbsoluteFill style={{ backgroundColor: bg }}>
+    <AbsoluteFill style={{ backgroundColor: bg, transform: `scale(${breathe})` }}>
       <div style={{
         position: 'absolute', inset: 0,
         background: `radial-gradient(ellipse at ${glowX}% ${glowY}%, ${pal.glow} 0%, transparent 58%)`,
@@ -77,7 +91,7 @@ function AnimatedBackground({ sceneId, theme }: { sceneId: string; theme?: Proje
 // ─── TextReveal — word-by-word spring stagger ─────────────────────────────────
 
 function TextReveal({
-  text, startDelay = 0, wordDelay = 5, style = {},
+  text, startDelay = 0, wordDelay = 3, style = {},
 }: {
   text: string
   startDelay?: number
@@ -92,14 +106,14 @@ function TextReveal({
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.2em', ...style }}>
       {words.map((word, i) => {
         const wf = Math.max(0, frame - startDelay - i * wordDelay)
-        const s = spring({ frame: wf, fps, config: { damping: 14, stiffness: 130 } })
+        const s = spring({ frame: wf, fps, config: { damping: 9, stiffness: 320 } })
         return (
           <span
             key={i}
             style={{
               display: 'inline-block',
               opacity: interpolate(s, [0, 1], [0, 1]),
-              transform: `translateY(${interpolate(s, [0, 1], [36, 0])}px)`,
+              transform: `translateY(${interpolate(s, [0, 1], [28, 0])}px)`,
             }}
           >
             {word}
@@ -117,7 +131,7 @@ function SceneLabel({ title, index, total, sceneId, theme }: {
 }) {
   const frame = useCurrentFrame()
   const pal = p(sceneId, theme)
-  const opacity = interpolate(frame, [0, 14], [0, 1], {
+  const opacity = interpolate(frame, [0, 8], [0, 1], {
     easing: Easing.bezier(0.16, 1, 0.3, 1),
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   })
@@ -163,6 +177,21 @@ function BottomBar({ sceneId, theme }: { sceneId: string; theme?: ProjectTheme }
   )
 }
 
+// ─── AccentLines — fast sweep on scene entry ──────────────────────────────────
+
+function AccentLines({ sceneId, theme }: { sceneId: string; theme?: ProjectTheme }) {
+  const frame = useCurrentFrame()
+  const pal = p(sceneId, theme)
+  const w1 = interpolate(frame, [0, 8], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+  const w2 = interpolate(frame, [2, 10], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+  return (
+    <div style={{ position: 'absolute', bottom: 80, left: 80, zIndex: 5, pointerEvents: 'none' }}>
+      <div style={{ height: 3, width: `${w1 * 200}px`, background: pal.primary, borderRadius: 2, marginBottom: 6, opacity: 0.9 }} />
+      <div style={{ height: 2, width: `${w2 * 120}px`, background: pal.primary, borderRadius: 2, opacity: 0.4 }} />
+    </div>
+  )
+}
+
 // ─── SCENE 1: Hook ───────────────────────────────────────────────────────────
 
 function HookScene({ scene, repoName, theme }: { scene: ScriptScene; repoName: string; theme?: ProjectTheme }) {
@@ -171,34 +200,28 @@ function HookScene({ scene, repoName, theme }: { scene: ScriptScene; repoName: s
   const pal = p(scene.id, theme)
   const textColor = theme?.isDark === false ? '#111111' : '#ffffff'
 
-  const bgScale = interpolate(frame, [0, 150], [1.08, 1.0], {
+  const eyebrowOpacity = interpolate(frame, [4, 14], [0, 1], {
     easing: Easing.bezier(0.16, 1, 0.3, 1),
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   })
-  const eyebrowOpacity = interpolate(frame, [6, 22], [0, 1], {
-    easing: Easing.bezier(0.16, 1, 0.3, 1),
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-  })
-  const lineWidth = interpolate(frame, [18, 45], [0, 320], {
+  const lineWidth = interpolate(frame, [10, 28], [0, 320], {
     easing: Easing.bezier(0.16, 1, 0.3, 1),
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   })
 
-  // Avatar spring-in
-  const avatarS = spring({ frame: Math.max(0, frame - 2), fps, config: { damping: 14, stiffness: 120 } })
+  const avatarS = spring({ frame: Math.max(0, frame - 1), fps, config: { damping: 9, stiffness: 320 } })
   const avatarScale = interpolate(avatarS, [0, 1], [0.6, 1.0])
   const avatarOpacity = interpolate(avatarS, [0, 1], [0, 1])
 
   return (
     <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-      <div style={{ transform: `scale(${bgScale})`, position: 'absolute', inset: 0 }}>
-        <AnimatedBackground sceneId={scene.id} theme={theme} />
-      </div>
+      <MicroMotionBg sceneId={scene.id} theme={theme} />
+      <FlashCut />
       <SceneLabel title={scene.title} index={0} total={5} sceneId={scene.id} theme={theme} />
       <BottomBar sceneId={scene.id} theme={theme} />
+      <AccentLines sceneId={scene.id} theme={theme} />
 
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '0 80px' }}>
-        {/* Project logo (README-extracted) or owner avatar fallback */}
         {(theme?.logoUrl ?? theme?.avatarUrl) && (
           <div style={{
             marginBottom: 28,
@@ -209,10 +232,7 @@ function HookScene({ scene, repoName, theme }: { scene: ScriptScene; repoName: s
             <Img
               src={theme.logoUrl ?? theme.avatarUrl}
               style={{
-                // Logo: natural size up to 160px tall, no circle crop
-                // Avatar fallback: circular treatment
-                maxHeight: 120,
-                maxWidth: 320,
+                maxHeight: 120, maxWidth: 320,
                 borderRadius: theme.logoUrl ? 12 : '50%',
                 border: `1px solid ${pal.primary}40`,
                 boxShadow: `0 0 28px ${pal.primary}30`,
@@ -222,7 +242,6 @@ function HookScene({ scene, repoName, theme }: { scene: ScriptScene; repoName: s
           </div>
         )}
 
-        {/* Eyebrow */}
         <div style={{
           opacity: eyebrowOpacity,
           color: pal.primary, fontSize: 15, fontFamily: 'monospace',
@@ -231,11 +250,10 @@ function HookScene({ scene, repoName, theme }: { scene: ScriptScene; repoName: s
           github.com / {repoName.split('/').pop()?.toLowerCase() ?? repoName}
         </div>
 
-        {/* Big headline */}
         <TextReveal
           text={scene.headline || repoName}
-          startDelay={4}
-          wordDelay={5}
+          startDelay={2}
+          wordDelay={3}
           style={{
             fontSize: 108, fontWeight: 900, fontFamily: 'sans-serif',
             color: textColor, lineHeight: 0.95, letterSpacing: -3,
@@ -243,23 +261,21 @@ function HookScene({ scene, repoName, theme }: { scene: ScriptScene; repoName: s
           }}
         />
 
-        {/* Accent underline */}
         <div style={{
           height: 4, width: lineWidth,
           background: `linear-gradient(90deg, ${pal.primary}, ${pal.dim})`,
           borderRadius: 2, margin: '32px auto 0',
         }} />
 
-        {/* Subtext */}
         {scene.subtext && (
           <div style={{
             marginTop: 24, color: `${textColor}70`, fontSize: 22,
             fontFamily: 'sans-serif', fontWeight: 400,
-            opacity: interpolate(frame, [28, 45], [0, 1], {
+            opacity: interpolate(frame, [18, 30], [0, 1], {
               easing: Easing.bezier(0.16, 1, 0.3, 1),
               extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
             }),
-            transform: `translateY(${interpolate(frame, [28, 45], [16, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            transform: `translateY(${interpolate(frame, [18, 30], [12, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
           }}>
             {scene.subtext}
           </div>
@@ -276,23 +292,25 @@ function ProblemScene({ scene, theme }: { scene: ScriptScene; theme?: ProjectThe
   const pal = p(scene.id, theme)
   const textColor = theme?.isDark === false ? '#111111' : '#ffffff'
 
-  const labelOpacity = interpolate(frame, [0, 16], [0, 1], {
+  const labelOpacity = interpolate(frame, [0, 8], [0, 1], {
     easing: Easing.bezier(0.16, 1, 0.3, 1),
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   })
-  const subtextOpacity = interpolate(frame, [32, 52], [0, 1], {
+  const subtextOpacity = interpolate(frame, [20, 34], [0, 1], {
     easing: Easing.bezier(0.16, 1, 0.3, 1),
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   })
-  const subtextY = interpolate(frame, [32, 52], [20, 0], {
+  const subtextY = interpolate(frame, [20, 34], [14, 0], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   })
 
   return (
     <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 80px' }}>
-      <AnimatedBackground sceneId={scene.id} theme={theme} />
+      <MicroMotionBg sceneId={scene.id} theme={theme} />
+      <FlashCut color='#ef4444' />
       <SceneLabel title={scene.title} index={1} total={5} sceneId={scene.id} theme={theme} />
       <BottomBar sceneId={scene.id} theme={theme} />
+      <AccentLines sceneId={scene.id} theme={theme} />
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 1100 }}>
         <div style={{
@@ -306,7 +324,7 @@ function ProblemScene({ scene, theme }: { scene: ScriptScene; theme?: ProjectThe
         <TextReveal
           text={scene.headline || 'The old way is broken'}
           startDelay={0}
-          wordDelay={7}
+          wordDelay={3}
           style={{
             fontSize: 80, fontWeight: 900, fontFamily: 'sans-serif',
             color: textColor, lineHeight: 1.05, letterSpacing: -2,
@@ -337,28 +355,40 @@ function SolutionScene({ scene, repoName, theme }: { scene: ScriptScene; repoNam
   const pal = p(scene.id, theme)
   const textColor = theme?.isDark === false ? '#111111' : '#ffffff'
 
-  // Burst ring
-  const burst = spring({ frame: Math.max(0, frame - 3), fps, config: { damping: 7, stiffness: 50 } })
+  // Shock flash — accent colored "aha" moment
+  const shockOpacity = interpolate(frame, [0, 4], [0.9, 0], {
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+  })
+
+  const burst = spring({ frame: Math.max(0, frame - 2), fps, config: { damping: 7, stiffness: 80 } })
   const burstScale = interpolate(burst, [0, 1], [0.2, 2.8])
   const burstOpacity = interpolate(burst, [0, 0.4, 1], [0, 0.5, 0])
 
-  const introOpacity = interpolate(frame, [4, 20], [0, 1], {
+  const introOpacity = interpolate(frame, [2, 12], [0, 1], {
     easing: Easing.bezier(0.16, 1, 0.3, 1),
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   })
 
-  const subtextOpacity = interpolate(frame, [36, 54], [0, 1], {
+  const subtextOpacity = interpolate(frame, [22, 36], [0, 1], {
     easing: Easing.bezier(0.16, 1, 0.3, 1),
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   })
 
   return (
     <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-      <AnimatedBackground sceneId={scene.id} theme={theme} />
+      <MicroMotionBg sceneId={scene.id} theme={theme} />
       <SceneLabel title={scene.title} index={2} total={5} sceneId={scene.id} theme={theme} />
       <BottomBar sceneId={scene.id} theme={theme} />
+      <AccentLines sceneId={scene.id} theme={theme} />
 
-      {/* Burst ring */}
+      {/* Accent-colored shock flash — the "aha" moment */}
+      {shockOpacity > 0 && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 100, pointerEvents: 'none',
+          backgroundColor: pal.primary, opacity: shockOpacity,
+        }} />
+      )}
+
       <div style={{
         position: 'absolute',
         width: 480, height: 480,
@@ -380,8 +410,8 @@ function SolutionScene({ scene, repoName, theme }: { scene: ScriptScene; repoNam
 
         <TextReveal
           text={scene.headline || repoName}
-          startDelay={10}
-          wordDelay={8}
+          startDelay={4}
+          wordDelay={3}
           style={{
             fontSize: 96, fontWeight: 900, fontFamily: 'sans-serif',
             color: textColor, lineHeight: 0.95, letterSpacing: -3,
@@ -394,7 +424,7 @@ function SolutionScene({ scene, repoName, theme }: { scene: ScriptScene; repoNam
             opacity: subtextOpacity,
             color: `${textColor}a0`, fontSize: 24, fontFamily: 'sans-serif',
             lineHeight: 1.6, maxWidth: 780, margin: '0 auto',
-            transform: `translateY(${interpolate(frame, [36, 54], [20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
+            transform: `translateY(${interpolate(frame, [22, 36], [14, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}px)`,
           }}>
             {scene.subtext}
           </div>
@@ -414,21 +444,19 @@ function FeatureSlide({ text, index, total, sceneId, theme }: {
   const pal = p(sceneId, theme)
   const textColor = theme?.isDark === false ? '#111111' : '#ffffff'
 
-  const s = spring({ frame, fps, config: { damping: 18, stiffness: 200 } })
-
-  const opacity = interpolate(frame, [0, 8], [0, 1], {
+  const s = spring({ frame, fps, config: { damping: 9, stiffness: 320 } })
+  const opacity = interpolate(frame, [0, 5], [0, 1], {
     easing: Easing.bezier(0.16, 1, 0.3, 1),
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   })
-  const translateX = interpolate(s, [0, 1], [120, 0])
-  const lineWidth = interpolate(frame, [6, 24], [0, 280], {
+  const translateX = interpolate(s, [0, 1], [80, 0])
+  const lineWidth = interpolate(frame, [3, 14], [0, 280], {
     easing: Easing.bezier(0.16, 1, 0.3, 1),
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   })
 
   return (
     <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 80px' }}>
-      {/* Counter */}
       <div style={{
         opacity, marginBottom: 16,
         color: pal.primary, fontSize: 13, fontFamily: 'monospace', letterSpacing: 4,
@@ -436,7 +464,6 @@ function FeatureSlide({ text, index, total, sceneId, theme }: {
         {String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
       </div>
 
-      {/* Feature text */}
       <div style={{
         opacity,
         transform: `translateX(${translateX}px)`,
@@ -447,7 +474,6 @@ function FeatureSlide({ text, index, total, sceneId, theme }: {
         {text}
       </div>
 
-      {/* Underline */}
       <div style={{
         marginTop: 24, height: 4, width: lineWidth,
         background: `linear-gradient(90deg, ${pal.primary}, ${pal.dim})`,
@@ -469,15 +495,15 @@ function FeaturesScene({ scene, theme }: { scene: ScriptScene; theme?: ProjectTh
 
   return (
     <AbsoluteFill>
-      <AnimatedBackground sceneId={scene.id} theme={theme} />
+      <MicroMotionBg sceneId={scene.id} theme={theme} />
+      <FlashCut />
       <SceneLabel title={scene.title} index={3} total={5} sceneId={scene.id} theme={theme} />
       <BottomBar sceneId={scene.id} theme={theme} />
 
-      {/* Label */}
       <div style={{
         position: 'absolute', top: 100, left: 80, zIndex: 10,
         color: pal.primary, fontSize: 14, fontFamily: 'monospace', letterSpacing: 4,
-        opacity: interpolate(frame, [0, 14], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+        opacity: interpolate(frame, [0, 8], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
         textTransform: 'uppercase',
       }}>
         Key features
@@ -508,11 +534,11 @@ function CTAScene({ scene, repoName, repoUrl, theme }: {
   const pal = p(scene.id, theme)
   const textColor = theme?.isDark === false ? '#111111' : '#ffffff'
 
-  const mainS = spring({ frame, fps, config: { damping: 14, stiffness: 100 } })
+  const mainS = spring({ frame, fps, config: { damping: 9, stiffness: 280 } })
   const mainOpacity = interpolate(mainS, [0, 1], [0, 1])
   const mainScale = interpolate(mainS, [0, 1], [0.88, 1])
 
-  const cardOpacity = interpolate(frame, [22, 38], [0, 1], {
+  const cardOpacity = interpolate(frame, [14, 24], [0, 1], {
     easing: Easing.bezier(0.16, 1, 0.3, 1),
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   })
@@ -523,9 +549,11 @@ function CTAScene({ scene, repoName, repoUrl, theme }: {
 
   return (
     <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-      <AnimatedBackground sceneId={scene.id} theme={theme} />
+      <MicroMotionBg sceneId={scene.id} theme={theme} />
+      <FlashCut />
       <SceneLabel title={scene.title} index={4} total={5} sceneId={scene.id} theme={theme} />
       <BottomBar sceneId={scene.id} theme={theme} />
+      <AccentLines sceneId={scene.id} theme={theme} />
 
       <div style={{
         position: 'relative', zIndex: 1, textAlign: 'center',
@@ -542,14 +570,13 @@ function CTAScene({ scene, repoName, repoUrl, theme }: {
           <div style={{
             color: `${textColor}60`, fontSize: 22, fontFamily: 'sans-serif',
             marginBottom: 36,
-            opacity: interpolate(frame, [18, 32], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+            opacity: interpolate(frame, [10, 20], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
           }}>
             {scene.subtext}
           </div>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, opacity: cardOpacity }}>
-          {/* Install command badge — shown if available */}
           {installCmd && (
             <div style={{
               transform: `scale(${pulse})`,
@@ -566,7 +593,6 @@ function CTAScene({ scene, repoName, repoUrl, theme }: {
             </div>
           )}
 
-          {/* GitHub URL */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 12,
             padding: '12px 24px',
