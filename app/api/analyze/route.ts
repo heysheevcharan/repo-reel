@@ -1,15 +1,43 @@
-import { bufferMockData } from '@/lib/mockData'
-import { RepoData } from '@/lib/types'
+import { analyzeGitHubRepo } from '@/lib/github'
+import { generateVideoScript } from '@/lib/scriptGenerator'
 
 export async function POST(request: Request) {
-  const { url } = await request.json()
+  try {
+    const { url } = await request.json()
 
-  // Simulate 12 second processing time
-  await new Promise((resolve) => setTimeout(resolve, 12000))
+    if (!url) {
+      return Response.json({ error: 'URL required' }, { status: 400 })
+    }
 
-  // Return mock data for Buffer repo
-  // In a real implementation, this would analyze the actual GitHub repo
-  const repoData: RepoData = bufferMockData
+    console.log('[v0] Analyzing GitHub repo:', url)
 
-  return Response.json(repoData)
+    // Analyze the GitHub repository
+    const repoData = await analyzeGitHubRepo(url)
+    console.log('[v0] Repo analysis complete:', repoData.repo)
+
+    // Generate the video script using AI
+    const scriptScenes = await generateVideoScript(repoData)
+    console.log('[v0] Script generated with', scriptScenes.length, 'scenes')
+
+    // Calculate total duration
+    const totalDurationSeconds = scriptScenes.reduce((sum, s) => sum + s.duration, 0)
+
+    return Response.json({
+      repoName: `${repoData.owner}/${repoData.repo}`,
+      repoUrl: url,
+      description: repoData.description,
+      stars: repoData.stars,
+      language: repoData.language,
+      topics: repoData.topics,
+      scriptScenes,
+      totalDurationSeconds,
+      analysisTimestamp: new Date().toISOString(),
+    })
+  } catch (error: any) {
+    console.error('[v0] Analyze API error:', error)
+    return Response.json(
+      { error: error.message || 'Failed to analyze repository' },
+      { status: 500 }
+    )
+  }
 }

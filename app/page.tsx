@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ScreenState, RepoData, Scene } from '@/lib/types'
+import { ScreenState, RepoData, ScriptScene } from '@/lib/types'
 import { LandingScreen } from '@/components/LandingScreen'
 import { ProgressScreen } from '@/components/ProgressScreen'
 import { ScriptEditor } from '@/components/ScriptEditor'
@@ -11,7 +11,8 @@ export default function Home() {
   const [screen, setScreen] = useState<ScreenState>('landing')
   const [repoUrl, setRepoUrl] = useState('')
   const [repoData, setRepoData] = useState<RepoData | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [videoUrl, setVideoUrl] = useState<string>('')
+  const [error, setError] = useState<string>('')
 
   const extractRepoName = (url: string): string => {
     const parts = url.replace('https://github.com/', '').split('/')
@@ -21,7 +22,7 @@ export default function Home() {
   const handleLandingSubmit = async (url: string) => {
     setRepoUrl(url)
     setScreen('progress')
-    setIsLoading(true)
+    setError('')
 
     try {
       const response = await fetch('/api/analyze', {
@@ -29,13 +30,18 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to analyze repository')
+      }
+
       const data = await response.json()
       setRepoData(data)
-    } catch (error) {
-      console.error('Failed to analyze repo:', error)
+    } catch (err: any) {
+      console.error('[v0] Landing error:', err)
+      setError(err.message)
       setScreen('landing')
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -43,18 +49,30 @@ export default function Home() {
     setScreen('editor')
   }
 
-  const handleRender = async (scenes: Scene[]) => {
+  const handleRender = async (scenes: ScriptScene[]) => {
     try {
+      setError('')
       const response = await fetch('/api/render', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenes }),
+        body: JSON.stringify({
+          scenes,
+          repoName: repoData?.repoName,
+          repoUrl,
+        }),
       })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to render video')
+      }
+
       const data = await response.json()
-      // Store video URL if needed
+      setVideoUrl(data.videoUrl)
       setScreen('output')
-    } catch (error) {
-      console.error('Failed to render video:', error)
+    } catch (err: any) {
+      console.error('[v0] Render error:', err)
+      setError(err.message)
     }
   }
 
@@ -73,6 +91,12 @@ export default function Home() {
 
   return (
     <div className="bg-background">
+      {error && (
+        <div className="fixed top-0 left-0 right-0 bg-red-900/20 border-b border-red-500/50 p-4 text-red-200 text-sm">
+          Error: {error}
+        </div>
+      )}
+
       {screen === 'landing' && (
         <LandingScreen onSubmit={handleLandingSubmit} />
       )}
@@ -98,6 +122,7 @@ export default function Home() {
           repoName={extractRepoName(repoUrl)}
           duration={repoData?.totalDurationSeconds || 58}
           onEdit={handleEditBack}
+          videoUrl={videoUrl}
         />
       )}
     </div>
