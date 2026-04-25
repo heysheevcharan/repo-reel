@@ -13,6 +13,7 @@ export default function Home() {
   const [repoData, setRepoData] = useState<RepoData | null>(null)
   const [videoUrl, setVideoUrl] = useState<string>('')
   const [error, setError] = useState<string>('')
+  const [isRendering, setIsRendering] = useState(false)
 
   const extractRepoName = (url: string): string => {
     const parts = url.replace('https://github.com/', '').split('/')
@@ -52,6 +53,7 @@ export default function Home() {
   const handleRender = async (scenes: ScriptScene[]) => {
     try {
       setError('')
+      setIsRendering(true)
       const response = await fetch('/api/render', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -73,6 +75,8 @@ export default function Home() {
     } catch (err: any) {
       console.error('[v0] Render error:', err)
       setError(err.message)
+    } finally {
+      setIsRendering(false)
     }
   }
 
@@ -114,6 +118,7 @@ export default function Home() {
           data={repoData}
           onBack={handleEditorBack}
           onRender={handleRender}
+          isRendering={isRendering}
         />
       )}
 

@@ -46,7 +46,7 @@ Return ONLY valid JSON, no markdown, no extra text.`
       model: 'openai/gpt-4o-mini',
       prompt,
       temperature: 0.7,
-      maxTokens: 1000,
+      maxOutputTokens: 1000,
     })
 
     const parsed = JSON.parse(text)

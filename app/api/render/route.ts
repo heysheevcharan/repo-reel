@@ -1,4 +1,7 @@
-import { renderVideo } from '@/lib/videoRenderer'
+import { renderVideo, warmBundle } from '@/lib/videoRenderer'
+
+// Warm the Remotion bundle cache as soon as this route module loads
+warmBundle()
 
 export async function POST(request: Request) {
   try {
@@ -8,9 +11,6 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Scenes required' }, { status: 400 })
     }
 
-    console.log('[v0] Starting video render for:', repoName)
-
-    // Render the video
     const result = await renderVideo(scenes, repoName, repoUrl)
 
     return Response.json({
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       format: result.format,
     })
   } catch (error: any) {
-    console.error('[v0] Render API error:', error)
+    console.error('[render] error:', error)
     return Response.json(
       { error: error.message || 'Failed to render video' },
       { status: 500 }

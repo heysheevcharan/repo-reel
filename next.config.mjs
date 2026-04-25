@@ -3,6 +3,12 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  serverExternalPackages: [
+    '@remotion/bundler',
+    '@remotion/renderer',
+    '@remotion/compositor-darwin-arm64',
+    'remotion',
+  ],
   images: {
     unoptimized: true,
   },

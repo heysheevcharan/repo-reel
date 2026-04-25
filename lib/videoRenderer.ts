@@ -1,3 +1,7 @@
+import path from 'path'
+import fs from 'fs'
+import { bundle } from '@remotion/bundler'
+import { renderMedia, selectComposition } from '@remotion/renderer'
 import { ScriptScene } from './scriptGenerator'
 
 export interface RenderResult {
@@ -6,74 +10,67 @@ export interface RenderResult {
   format: 'mp4' | 'webm'
 }
 
-/**
- * Renders a video from scenes using Remotion
- * For now, this is a mock implementation that returns a placeholder URL
- * In production, this would call the Remotion API or render server
- */
+const OUTPUT_DIR = path.join(process.cwd(), 'public', 'videos')
+
+// Cache the bundle URL so webpack only runs once per server lifecycle
+let cachedBundleUrl: string | null = null
+let bundleInProgress: Promise<string> | null = null
+
+export function warmBundle(): void {
+  getBundleUrl().catch(() => {})
+}
+
+async function getBundleUrl(): Promise<string> {
+  if (cachedBundleUrl) return cachedBundleUrl
+  if (bundleInProgress) return bundleInProgress
+
+  const entryPoint = path.join(process.cwd(), 'lib', 'remotion', 'Root.tsx')
+  bundleInProgress = bundle({ entryPoint, webpackOverride: (c) => c }).then((url) => {
+    cachedBundleUrl = url
+    bundleInProgress = null
+    return url
+  })
+  return bundleInProgress
+}
+
 export async function renderVideo(
   scenes: ScriptScene[],
   repoName: string,
   repoUrl: string
 ): Promise<RenderResult> {
-  console.log('[v0] Starting video render with scenes:', scenes)
+  fs.mkdirSync(OUTPUT_DIR, { recursive: true })
 
-  try {
-    // In production, this would:
-    // 1. Call the Remotion API endpoint with scene data
-    // 2. Wait for video to be rendered
-    // 3. Upload to storage (Vercel Blob, S3, etc)
-    // 4. Return the public URL
+  const outputFile = path.join(OUTPUT_DIR, `${repoName.replace(/[^a-z0-9]/gi, '-')}-${Date.now()}.mp4`)
+  const bundled = await getBundleUrl()
 
-    const duration = scenes.reduce((sum, s) => sum + s.duration, 0)
+  const fps = 30
+  const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0)
+  const durationInFrames = totalDuration * fps
 
-    // Mock delay to simulate rendering
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+  const composition = await selectComposition({
+    serveUrl: bundled,
+    id: 'RepoReelVideo',
+    inputProps: { scenes, repoName, repoUrl },
+  })
 
-    // Return a placeholder URL (in real implementation, this would be a real video URL)
-    return {
-      videoUrl: `https://example.com/videos/${repoName.replace(/\s+/g, '-')}-${Date.now()}.mp4`,
-      duration,
-      format: 'mp4',
-    }
-  } catch (error) {
-    console.error('[v0] Video rendering error:', error)
-    throw new Error('Failed to render video')
-  }
-}
+  await renderMedia({
+    composition: {
+      ...composition,
+      durationInFrames,
+      defaultProps: { scenes, repoName, repoUrl },
+    },
+    serveUrl: bundled,
+    codec: 'h264',
+    outputLocation: outputFile,
+    inputProps: { scenes, repoName, repoUrl },
+    chromiumOptions: { disableWebSecurity: true },
+  })
 
-/**
- * Starts a background render job
- * Returns a job ID that can be used to check progress
- */
-export async function startRenderJob(
-  scenes: ScriptScene[],
-  repoName: string,
-  repoUrl: string
-): Promise<string> {
-  const jobId = `job-${Date.now()}`
-  console.log('[v0] Started render job:', jobId)
+  const videoUrl = `/videos/${path.basename(outputFile)}`
 
-  // In production, this would queue a background job
-  // For now, just return a mock job ID
-  return jobId
-}
-
-/**
- * Check the status of a render job
- */
-export async function getRenderJobStatus(
-  jobId: string
-): Promise<{
-  status: 'queued' | 'rendering' | 'completed' | 'failed'
-  progress?: number
-  videoUrl?: string
-  error?: string
-}> {
-  // Mock implementation
   return {
-    status: 'completed',
-    progress: 100,
-    videoUrl: `https://example.com/videos/${jobId}.mp4`,
+    videoUrl,
+    duration: totalDuration,
+    format: 'mp4',
   }
 }
