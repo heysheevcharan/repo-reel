@@ -3,6 +3,7 @@ import fs from 'fs'
 import { bundle } from '@remotion/bundler'
 import { renderMedia, selectComposition } from '@remotion/renderer'
 import { ScriptScene } from './scriptGenerator'
+import { calcDurationInFrames, calcKineticDurationInFrames } from './remotion/duration'
 
 export interface RenderResult {
   videoUrl: string
@@ -48,7 +49,6 @@ export async function renderVideo(
 
   const fps = 30
   const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0)
-  const { calcDurationInFrames, calcKineticDurationInFrames } = await import('./remotion/Root')
 
   const compositionId = template === 'kinetic' ? 'KineticVideo' : 'RepoReelVideo'
   const durationInFrames = template === 'kinetic'

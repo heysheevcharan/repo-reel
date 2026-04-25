@@ -1,8 +1,11 @@
 import React from 'react'
 import { Composition, registerRoot } from 'remotion'
-import { RepoReelVideo, VideoProps, TRANSITION_FRAMES } from './VideoComposition'
-import { KineticVideo, KineticVideoProps, KINETIC_TRANSITION_FRAMES } from './KineticComposition'
+import { RepoReelVideo, VideoProps } from './VideoComposition'
+import { KineticVideo, KineticVideoProps } from './KineticComposition'
+import { calcDurationInFrames, calcKineticDurationInFrames } from './duration'
 import { ScriptScene } from '../scriptGenerator'
+
+export { calcDurationInFrames, calcKineticDurationInFrames }
 
 const FPS = 30
 
@@ -14,17 +17,6 @@ const DEFAULT_SCENES: ScriptScene[] = [
   { id: 'scene5', title: 'Get Started', duration: 5, headline: 'Star on GitHub',     subtext: 'Open source. Always free.', bullets: [], narrative: 'Sample call to action.', visuals: '' },
 ]
 
-export function calcDurationInFrames(scenes: ScriptScene[], fps: number): number {
-  const totalSceneFrames = scenes.reduce((s, sc) => s + sc.duration * fps, 0)
-  const transitionFrames = (scenes.length - 1) * TRANSITION_FRAMES
-  return totalSceneFrames - transitionFrames
-}
-
-export function calcKineticDurationInFrames(scenes: ScriptScene[], fps: number): number {
-  const totalSceneFrames = scenes.reduce((s, sc) => s + sc.duration * fps, 0)
-  const transitionFrames = (scenes.length - 1) * KINETIC_TRANSITION_FRAMES
-  return totalSceneFrames - transitionFrames
-}
 
 const RemotionRoot: React.FC = () => {
   return (
