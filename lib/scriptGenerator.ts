@@ -6,11 +6,11 @@ export type { ScriptScene }
 
 // Fixed structure — AI only fills content, never changes order/duration
 const SCENE_TEMPLATES: Pick<ScriptScene, 'id' | 'title' | 'duration'>[] = [
-  { id: 'scene1', title: 'Hook',        duration: 5 },
-  { id: 'scene2', title: 'Problem',     duration: 7 },
-  { id: 'scene3', title: 'Solution',    duration: 7 },
-  { id: 'scene4', title: 'Features',    duration: 6 },
-  { id: 'scene5', title: 'Get Started', duration: 5 },
+  { id: 'scene1', title: 'Hook',        duration: 4 },
+  { id: 'scene2', title: 'Problem',     duration: 5 },
+  { id: 'scene3', title: 'Solution',    duration: 5 },
+  { id: 'scene4', title: 'Features',    duration: 5 },
+  { id: 'scene5', title: 'Get Started', duration: 3 },
 ]
 
 export const TOTAL_DURATION_SECONDS = SCENE_TEMPLATES.reduce((s, sc) => s + sc.duration, 0)
@@ -38,11 +38,11 @@ Repository:
 
 Generate content for EXACTLY these 5 scenes in this EXACT order:
 
-scene1 "Hook" (5s) — Pattern interrupt. One bold claim. Make someone stop scrolling.
-scene2 "Problem" (7s) — The painful reality developers face without this. Be specific and felt.
-scene3 "Solution" (7s) — How ${repoData.repo} obliterates that problem. The aha moment.
-scene4 "Features" (6s) — Exactly 4 rapid-fire killer features. Short, punchy, specific.
-scene5 "Get Started" (5s) — The CTA. If an install command is available, use it verbatim in the narrative.
+scene1 "Hook" (4s) — One word or ultra-short phrase. Violent pattern interrupt. Stop the scroll.
+scene2 "Problem" (5s) — The pain, felt in the gut. Max 5 words headline. Brutal and specific.
+scene3 "Solution" (5s) — How ${repoData.repo} kills that problem. The aha moment. Max 4 words.
+scene4 "Features" (5s) — Exactly 4 killer features. 2-3 words each. No fluff.
+scene5 "Get Started" (3s) — One-line CTA. If install command exists, use it verbatim.
 
 Return ONLY a JSON array of 5 objects. Each object:
 {
