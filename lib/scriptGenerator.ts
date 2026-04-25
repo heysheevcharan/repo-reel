@@ -1,81 +1,78 @@
 import { generateText } from 'ai'
 import { GitHubRepoData } from './github'
+import type { ScriptScene } from './types'
 
-export interface ScriptScene {
-  id: string
-  title: string
-  duration: number
-  narrative: string
-  visuals: string
-}
+export type { ScriptScene }
 
-// Fixed scene structure — titles, order, and durations are never changed by AI
-const SCENE_TEMPLATES: Omit<ScriptScene, 'narrative' | 'visuals'>[] = [
-  { id: 'scene1', title: 'Hook',       duration: 5 },
-  { id: 'scene2', title: 'Problem',    duration: 7 },
-  { id: 'scene3', title: 'Solution',   duration: 7 },
-  { id: 'scene4', title: 'Features',   duration: 6 },
+// Fixed structure — AI only fills content, never changes order/duration
+const SCENE_TEMPLATES: Pick<ScriptScene, 'id' | 'title' | 'duration'>[] = [
+  { id: 'scene1', title: 'Hook',        duration: 5 },
+  { id: 'scene2', title: 'Problem',     duration: 7 },
+  { id: 'scene3', title: 'Solution',    duration: 7 },
+  { id: 'scene4', title: 'Features',    duration: 6 },
   { id: 'scene5', title: 'Get Started', duration: 5 },
 ]
 
-export const TOTAL_DURATION_SECONDS = SCENE_TEMPLATES.reduce((s, sc) => s + sc.duration, 0) // 30s
+export const TOTAL_DURATION_SECONDS = SCENE_TEMPLATES.reduce((s, sc) => s + sc.duration, 0)
 
-export async function generateVideoScript(
-  repoData: GitHubRepoData
-): Promise<ScriptScene[]> {
-  const prompt = `You are writing narration for a 30-second GitHub repo video.
+export async function generateVideoScript(repoData: GitHubRepoData): Promise<ScriptScene[]> {
+  const prompt = `You are an elite creative director writing a 30-second product launch video script for a GitHub repo.
 
-The video has EXACTLY 5 scenes in this FIXED order. Do NOT change the scene IDs, titles, or order:
+Think: Apple launch energy. Linear.app aesthetic. Viral YC startup video.
+Every word must earn its place. Max 6 words per headline.
 
-1. scene1 "Hook" (5s) — One punchy sentence that grabs attention. Name the project and its core value.
-2. scene2 "Problem" (7s) — Describe the pain point developers face WITHOUT this tool. Be specific and relatable.
-3. scene3 "Solution" (7s) — Explain how ${repoData.repo} solves that problem. What does it actually do?
-4. scene4 "Features" (6s) — 2-3 standout features. Be concrete, not generic.
-5. scene5 "Get Started" (5s) — How to install/use it. Mention stars (${repoData.stars}) and language (${repoData.language}).
-
-Repository context:
+Repository:
 - Name: ${repoData.repo}
 - Description: ${repoData.description || 'No description'}
 - Language: ${repoData.language}
 - Stars: ${repoData.stars}
 - Topics: ${repoData.topics.join(', ')}
-- README: ${repoData.readme.slice(0, 800)}
-${repoData.packageJson.description ? `- Package description: ${repoData.packageJson.description}` : ''}
+- README: ${repoData.readme.slice(0, 600)}
 
-Return ONLY a JSON array of exactly 5 objects. Each object must have:
-- id: exactly "scene1" through "scene5" (do NOT change these)
-- narrative: spoken narration for that scene (20-40 words, punchy and direct)
-- visuals: one short sentence describing what to show on screen
+Generate content for EXACTLY these 5 scenes in this EXACT order:
 
-Example format:
-[
-  {"id":"scene1","narrative":"...","visuals":"..."},
-  {"id":"scene2","narrative":"...","visuals":"..."},
-  {"id":"scene3","narrative":"...","visuals":"..."},
-  {"id":"scene4","narrative":"...","visuals":"..."},
-  {"id":"scene5","narrative":"...","visuals":"..."}
-]
+scene1 "Hook" (5s) — Pattern interrupt. One bold claim. Make someone stop scrolling.
+scene2 "Problem" (7s) — The painful reality developers face without this. Be specific and felt.
+scene3 "Solution" (7s) — How ${repoData.repo} obliterates that problem. The aha moment.
+scene4 "Features" (6s) — Exactly 4 rapid-fire killer features. Short, punchy, specific.
+scene5 "Get Started" (5s) — The CTA. Clear action. Mention stars and language.
 
-Return ONLY the JSON array. No markdown, no extra text.`
+Return ONLY a JSON array of 5 objects. Each object:
+{
+  "id": "scene1",                          // FIXED — do not change
+  "headline": "2-5 word bold display text",  // shown BIG on screen, max 6 words
+  "subtext": "One supporting sentence.",     // smaller text below headline
+  "bullets": ["feature 1","feature 2","feature 3","feature 4"],  // ONLY for scene4, else omit or []
+  "narrative": "Full spoken narration."      // 20-35 words
+}
+
+Rules:
+- headline: SHORT and PUNCHY. Max 6 words. No punctuation except "—".
+- subtext: one clean sentence, no filler words
+- bullets (scene4 only): exactly 4 items, each 2-5 words, specific features not generic claims
+- narrative: energetic spoken words, present tense, active voice
+
+Return ONLY the JSON array. No markdown fences, no extra text.`
 
   try {
     const { text } = await generateText({
       model: 'openai/gpt-4o-mini',
       prompt,
-      temperature: 0.6,
-      maxOutputTokens: 800,
+      temperature: 0.65,
+      maxOutputTokens: 900,
     })
 
-    const parsed: { id: string; narrative: string; visuals: string }[] =
-      JSON.parse(text.trim())
+    const parsed: Partial<ScriptScene>[] = JSON.parse(text.trim())
 
-    // Merge AI narratives into hardcoded scene templates — structure is always enforced
     return SCENE_TEMPLATES.map((template) => {
-      const aiScene = parsed.find((s) => s.id === template.id)
+      const ai = parsed.find((s) => s.id === template.id) ?? {}
       return {
         ...template,
-        narrative: aiScene?.narrative || fallbackNarrative(template.id, repoData),
-        visuals: aiScene?.visuals || '',
+        headline: ai.headline || fallbackHeadline(template.id, repoData),
+        subtext: ai.subtext || '',
+        bullets: ai.bullets ?? [],
+        narrative: ai.narrative || fallbackNarrative(template.id, repoData),
+        visuals: '',
       }
     })
   } catch (error) {
@@ -84,21 +81,35 @@ Return ONLY the JSON array. No markdown, no extra text.`
   }
 }
 
-function fallbackNarrative(id: string, repoData: GitHubRepoData): string {
+function fallbackHeadline(id: string, r: GitHubRepoData): string {
   switch (id) {
-    case 'scene1': return `Meet ${repoData.repo} — the ${repoData.language} project with ${repoData.stars} stars that every developer needs.`
-    case 'scene2': return `Developers waste hours on repetitive setup and boilerplate. There has to be a better way.`
-    case 'scene3': return `${repoData.repo} ${repoData.description || 'streamlines your entire workflow so you can focus on what matters.'}`
-    case 'scene4': return `Fast, well-documented, and actively maintained. It handles the hard parts so you don't have to.`
-    case 'scene5': return `Star it on GitHub, run the install command, and start building in minutes. Join ${repoData.stars} developers already using it.`
+    case 'scene1': return r.repo
+    case 'scene2': return 'The old way is broken'
+    case 'scene3': return `Meet ${r.repo}`
+    case 'scene4': return 'What makes it different'
+    case 'scene5': return 'Star it on GitHub'
+    default: return r.repo
+  }
+}
+
+function fallbackNarrative(id: string, r: GitHubRepoData): string {
+  switch (id) {
+    case 'scene1': return `${r.repo} — the ${r.language} project every developer needs. ${r.stars} stars and counting.`
+    case 'scene2': return `You're wasting hours on boilerplate, config, and repetitive setup. There's a better way.`
+    case 'scene3': return `${r.repo} ${r.description || 'eliminates the friction and gets you shipping faster.'}`
+    case 'scene4': return `Fast. Minimal setup. Works out of the box. Actively maintained.`
+    case 'scene5': return `Star it on GitHub. Run the install command. Be building in minutes.`
     default: return ''
   }
 }
 
-function generateFallbackScript(repoData: GitHubRepoData): ScriptScene[] {
+function generateFallbackScript(r: GitHubRepoData): ScriptScene[] {
   return SCENE_TEMPLATES.map((template) => ({
     ...template,
-    narrative: fallbackNarrative(template.id, repoData),
+    headline: fallbackHeadline(template.id, r),
+    subtext: '',
+    bullets: template.id === 'scene4' ? ['Zero config setup', 'Lightning fast', 'Actively maintained', 'Open source'] : [],
+    narrative: fallbackNarrative(template.id, r),
     visuals: '',
   }))
 }

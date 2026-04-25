@@ -6,11 +6,11 @@ import { ScriptScene } from '../scriptGenerator'
 const FPS = 30
 
 const DEFAULT_SCENES: ScriptScene[] = [
-  { id: 'scene1', title: 'Hook',        duration: 5, narrative: 'Sample hook narrative.', visuals: '' },
-  { id: 'scene2', title: 'Problem',     duration: 7, narrative: 'Sample problem narrative.', visuals: '' },
-  { id: 'scene3', title: 'Solution',    duration: 7, narrative: 'Sample solution narrative.', visuals: '' },
-  { id: 'scene4', title: 'Features',    duration: 6, narrative: 'Sample features narrative.', visuals: '' },
-  { id: 'scene5', title: 'Get Started', duration: 5, narrative: 'Sample call to action.', visuals: '' },
+  { id: 'scene1', title: 'Hook',        duration: 5, headline: 'repo-reel',          subtext: 'Turn any GitHub repo into a video.', bullets: [], narrative: 'Sample hook narrative.', visuals: '' },
+  { id: 'scene2', title: 'Problem',     duration: 7, headline: 'The old way is broken', subtext: 'Writing docs nobody reads.', bullets: [], narrative: 'Sample problem narrative.', visuals: '' },
+  { id: 'scene3', title: 'Solution',    duration: 7, headline: 'Meet repo-reel',     subtext: 'AI-generated launch videos in seconds.', bullets: [], narrative: 'Sample solution narrative.', visuals: '' },
+  { id: 'scene4', title: 'Features',    duration: 6, headline: 'What makes it different', subtext: '', bullets: ['AI script generation', 'Real Remotion rendering', '30-second format', 'One GitHub URL'], narrative: 'Sample features narrative.', visuals: '' },
+  { id: 'scene5', title: 'Get Started', duration: 5, headline: 'Star on GitHub',     subtext: 'Open source. Always free.', bullets: [], narrative: 'Sample call to action.', visuals: '' },
 ]
 
 export function calcDurationInFrames(scenes: ScriptScene[], fps: number): number {

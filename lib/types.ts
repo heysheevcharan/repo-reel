@@ -2,7 +2,10 @@ export interface ScriptScene {
   id: string
   title: string
   duration: number
-  narrative: string
+  headline: string      // 2–5 words shown BIG on screen
+  subtext?: string      // one supporting sentence
+  bullets?: string[]    // rapid-fire list (used in Features scene)
+  narrative: string     // full narration / voiceover
   visuals: string
 }
 
