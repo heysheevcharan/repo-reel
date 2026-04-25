@@ -38,7 +38,8 @@ async function getBundleUrl(): Promise<string> {
 export async function renderVideo(
   scenes: ScriptScene[],
   repoName: string,
-  repoUrl: string
+  repoUrl: string,
+  template: 'launch' | 'kinetic' = 'launch'
 ): Promise<RenderResult> {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true })
 
@@ -47,12 +48,16 @@ export async function renderVideo(
 
   const fps = 30
   const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0)
-  const { calcDurationInFrames } = await import('./remotion/Root')
-  const durationInFrames = calcDurationInFrames(scenes, fps)
+  const { calcDurationInFrames, calcKineticDurationInFrames } = await import('./remotion/Root')
+
+  const compositionId = template === 'kinetic' ? 'KineticVideo' : 'RepoReelVideo'
+  const durationInFrames = template === 'kinetic'
+    ? calcKineticDurationInFrames(scenes, fps)
+    : calcDurationInFrames(scenes, fps)
 
   const composition = await selectComposition({
     serveUrl: bundled,
-    id: 'RepoReelVideo',
+    id: compositionId,
     inputProps: { scenes, repoName, repoUrl },
   })
 

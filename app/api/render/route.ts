@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { scenes, repoName, repoUrl } = await request.json()
+    const { scenes, repoName, repoUrl, template } = await request.json()
 
     if (!scenes || !Array.isArray(scenes)) {
       return Response.json({ error: 'Scenes required' }, { status: 400 })
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       bullets: s.bullets ?? [],
     }))
 
-    const result = await renderVideo(normalizedScenes, repoName, repoUrl)
+    const result = await renderVideo(normalizedScenes, repoName, repoUrl, template ?? 'launch')
 
     return Response.json({
       success: true,

@@ -52,7 +52,7 @@ export default function Home() {
     setScreen('editor')
   }
 
-  const handleRender = async (scenes: ScriptScene[]) => {
+  const handleRender = async (scenes: ScriptScene[], template: 'launch' | 'kinetic' = 'launch') => {
     try {
       setError('')
       setIsRendering(true)
@@ -63,6 +63,7 @@ export default function Home() {
           scenes,
           repoName: repoData?.repoName,
           repoUrl,
+          template,
         }),
       })
 

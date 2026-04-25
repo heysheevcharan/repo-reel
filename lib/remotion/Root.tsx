@@ -1,6 +1,7 @@
 import React from 'react'
 import { Composition, registerRoot } from 'remotion'
 import { RepoReelVideo, VideoProps, TRANSITION_FRAMES } from './VideoComposition'
+import { KineticVideo, KineticVideoProps, KINETIC_TRANSITION_FRAMES } from './KineticComposition'
 import { ScriptScene } from '../scriptGenerator'
 
 const FPS = 30
@@ -19,24 +20,48 @@ export function calcDurationInFrames(scenes: ScriptScene[], fps: number): number
   return totalSceneFrames - transitionFrames
 }
 
+export function calcKineticDurationInFrames(scenes: ScriptScene[], fps: number): number {
+  const totalSceneFrames = scenes.reduce((s, sc) => s + sc.duration * fps, 0)
+  const transitionFrames = (scenes.length - 1) * KINETIC_TRANSITION_FRAMES
+  return totalSceneFrames - transitionFrames
+}
+
 const RemotionRoot: React.FC = () => {
   return (
-    <Composition
-      id="RepoReelVideo"
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      component={RepoReelVideo as any}
-      durationInFrames={calcDurationInFrames(DEFAULT_SCENES, FPS)}
-      fps={FPS}
-      width={1920}
-      height={1080}
-      defaultProps={
-        {
-          scenes: DEFAULT_SCENES,
-          repoName: 'repo-reel',
-          repoUrl: 'https://github.com/heysheevcharan/repo-reel',
-        } satisfies VideoProps
-      }
-    />
+    <>
+      <Composition
+        id="RepoReelVideo"
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        component={RepoReelVideo as any}
+        durationInFrames={calcDurationInFrames(DEFAULT_SCENES, FPS)}
+        fps={FPS}
+        width={1920}
+        height={1080}
+        defaultProps={
+          {
+            scenes: DEFAULT_SCENES,
+            repoName: 'repo-reel',
+            repoUrl: 'https://github.com/heysheevcharan/repo-reel',
+          } satisfies VideoProps
+        }
+      />
+      <Composition
+        id="KineticVideo"
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        component={KineticVideo as any}
+        durationInFrames={calcKineticDurationInFrames(DEFAULT_SCENES, FPS)}
+        fps={FPS}
+        width={1920}
+        height={1080}
+        defaultProps={
+          {
+            scenes: DEFAULT_SCENES,
+            repoName: 'repo-reel',
+            repoUrl: 'https://github.com/heysheevcharan/repo-reel',
+          } satisfies KineticVideoProps
+        }
+      />
+    </>
   )
 }
 
