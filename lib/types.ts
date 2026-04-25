@@ -9,6 +9,19 @@ export interface ScriptScene {
   visuals: string
 }
 
+export interface ProjectTheme {
+  primaryColor: string        // main brand / accent color
+  backgroundColor: string     // video background
+  isDark: boolean             // dark or light aesthetic
+  mood: 'minimal' | 'energetic' | 'technical' | 'playful' | 'enterprise'
+  avatarUrl: string           // owner avatar as data URL
+  socialPreviewUrl?: string   // og:image as data URL
+  installCommand?: string     // e.g. "npm install shadcn"
+  websiteUrl?: string
+  forks: number
+  openIssues: number
+}
+
 export interface RepoData {
   repoName: string
   repoUrl: string
@@ -19,6 +32,7 @@ export interface RepoData {
   scriptScenes: ScriptScene[]
   totalDurationSeconds: number
   analysisTimestamp: string
+  theme?: ProjectTheme
 }
 
 export type ScreenState = 'landing' | 'progress' | 'editor' | 'output'

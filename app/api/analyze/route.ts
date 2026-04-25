@@ -1,5 +1,6 @@
 import { analyzeGitHubRepo } from '@/lib/github'
 import { generateVideoScript } from '@/lib/scriptGenerator'
+import { extractProjectTheme } from '@/lib/themeExtractor'
 
 export async function POST(request: Request) {
   try {
@@ -9,17 +10,18 @@ export async function POST(request: Request) {
       return Response.json({ error: 'URL required' }, { status: 400 })
     }
 
-    console.log('[v0] Analyzing GitHub repo:', url)
-
-    // Analyze the GitHub repository
+    console.log('[analyze] fetching repo:', url)
     const repoData = await analyzeGitHubRepo(url)
-    console.log('[v0] Repo analysis complete:', repoData.repo)
+    console.log('[analyze] repo fetched:', repoData.repo)
 
-    // Generate the video script using AI
-    const scriptScenes = await generateVideoScript(repoData)
-    console.log('[v0] Script generated with', scriptScenes.length, 'scenes')
+    // Run script generation and theme extraction in parallel
+    const [scriptScenes, theme] = await Promise.all([
+      generateVideoScript(repoData),
+      extractProjectTheme(repoData, repoData.forks, repoData.openIssues, repoData.homepage),
+    ])
 
-    // Calculate total duration
+    console.log('[analyze] scenes:', scriptScenes.length, '| mood:', theme.mood, '| color:', theme.primaryColor)
+
     const totalDurationSeconds = scriptScenes.reduce((sum, s) => sum + s.duration, 0)
 
     return Response.json({
@@ -32,9 +34,10 @@ export async function POST(request: Request) {
       scriptScenes,
       totalDurationSeconds,
       analysisTimestamp: new Date().toISOString(),
+      theme,
     })
   } catch (error: any) {
-    console.error('[v0] Analyze API error:', error)
+    console.error('[analyze] error:', error)
     return Response.json(
       { error: error.message || 'Failed to analyze repository' },
       { status: 500 }

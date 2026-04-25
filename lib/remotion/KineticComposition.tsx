@@ -11,21 +11,21 @@ import {
 import { TransitionSeries, linearTiming } from '@remotion/transitions'
 import { fade } from '@remotion/transitions/fade'
 import type { ScriptScene } from '../scriptGenerator'
+import type { ProjectTheme } from '../types'
 
 export type KineticVideoProps = {
   scenes: ScriptScene[]
   repoName: string
   repoUrl: string
+  theme?: ProjectTheme
 }
 
 export const KINETIC_TRANSITION_FRAMES = 5
 
-const COLORS: Record<string, string> = {
-  scene1: '#a855f7',
-  scene2: '#ef4444',
-  scene3: '#3b82f6',
-  scene4: '#f59e0b',
-  scene5: '#10b981',
+// Problem scene stays red (intentional contrast); all others use brand color
+function sceneColor(sceneId: string, theme?: ProjectTheme): string {
+  if (sceneId === 'scene2') return '#ef4444'
+  return theme?.primaryColor ?? '#a855f7'
 }
 
 // ─── WordHit ──────────────────────────────────────────────────────────────────
@@ -252,9 +252,9 @@ function KineticSceneBase({
 
 // ─── KineticFeaturesScene ─────────────────────────────────────────────────────
 
-function KineticFeaturesScene({ scene, index }: { scene: ScriptScene; index: number }) {
+function KineticFeaturesScene({ scene, index, theme }: { scene: ScriptScene; index: number; theme?: ProjectTheme }) {
   const { durationInFrames } = useVideoConfig()
-  const accentColor = COLORS[scene.id] ?? '#f59e0b'
+  const accentColor = sceneColor(scene.id, theme)
   const bullets = scene.bullets?.filter(Boolean).slice(0, 4) ?? []
   const framesPerBullet = Math.floor(durationInFrames / bullets.length)
 
@@ -305,15 +305,16 @@ function BulletCounter({ index, total, accentColor }: { index: number; total: nu
 
 // ─── KineticCTAScene ──────────────────────────────────────────────────────────
 
-function KineticCTAScene({ scene, repoUrl, index }: {
-  scene: ScriptScene; repoUrl: string; index: number
+function KineticCTAScene({ scene, repoUrl, index, theme }: {
+  scene: ScriptScene; repoUrl: string; index: number; theme?: ProjectTheme
 }) {
   const { durationInFrames } = useVideoConfig()
-  const accentColor = COLORS[scene.id] ?? '#10b981'
+  const accentColor = sceneColor(scene.id, theme)
   const words = (scene.headline || 'Star on GitHub').split(' ').filter(Boolean)
   const wordSlots = Math.floor(durationInFrames * 0.6 / words.length)
   const urlStart = words.length * wordSlots
   const shortUrl = repoUrl.replace(/^https?:\/\//, '')
+  const installCmd = theme?.installCommand
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000000' }}>
@@ -338,11 +339,32 @@ function KineticCTAScene({ scene, repoUrl, index }: {
       })}
 
       <Sequence from={urlStart} durationInFrames={9999} layout="none">
-        <AbsoluteFill style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: 110 }}>
+        <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 100, gap: 16 }}>
+          {installCmd && <InstallBadge cmd={installCmd} accentColor={accentColor} />}
           <UrlCard url={shortUrl} accentColor={accentColor} />
         </AbsoluteFill>
       </Sequence>
     </AbsoluteFill>
+  )
+}
+
+function InstallBadge({ cmd, accentColor }: { cmd: string; accentColor: string }) {
+  const frame = useCurrentFrame()
+  const { fps } = useVideoConfig()
+  const s = spring({ frame, fps, config: { damping: 16, stiffness: 110 } })
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: 12,
+      padding: '14px 30px',
+      border: `1px solid ${accentColor}70`,
+      borderRadius: 10,
+      background: `${accentColor}18`,
+      opacity: interpolate(s, [0, 1], [0, 1]),
+      transform: `translateY(${interpolate(s, [0, 1], [24, 0])}px)`,
+    }}>
+      <span style={{ color: accentColor, fontSize: 16, fontFamily: 'monospace', letterSpacing: 2 }}>$</span>
+      <span style={{ color: '#ffffffee', fontSize: 20, fontFamily: 'monospace', letterSpacing: 0.5 }}>{cmd}</span>
+    </div>
   )
 }
 
@@ -371,19 +393,18 @@ function UrlCard({ url, accentColor }: { url: string; accentColor: string }) {
 
 // ─── Scene router ─────────────────────────────────────────────────────────────
 
-function KineticSceneRouter({ scene, repoName, repoUrl, index }: {
-  scene: ScriptScene; repoName: string; repoUrl: string; index: number
+function KineticSceneRouter({ scene, repoName, repoUrl, index, theme }: {
+  scene: ScriptScene; repoName: string; repoUrl: string; index: number; theme?: ProjectTheme
 }) {
-  const accentColor = COLORS[scene.id] ?? '#ffffff'
+  const accentColor = sceneColor(scene.id, theme)
 
   if (scene.id === 'scene4') {
-    return <KineticFeaturesScene scene={scene} index={index} />
+    return <KineticFeaturesScene scene={scene} index={index} theme={theme} />
   }
   if (scene.id === 'scene5') {
-    return <KineticCTAScene scene={scene} repoUrl={repoUrl} index={index} />
+    return <KineticCTAScene scene={scene} repoUrl={repoUrl} index={index} theme={theme} />
   }
 
-  // Hook: highlight first word, Problem: highlight last word, Solution: highlight first word
   const highlightWordIndex = scene.id === 'scene2' ? 999 : 0
 
   return (
@@ -398,7 +419,7 @@ function KineticSceneRouter({ scene, repoName, repoUrl, index }: {
 
 // ─── KineticVideo — main export ───────────────────────────────────────────────
 
-export const KineticVideo: React.FC<KineticVideoProps> = ({ scenes, repoName, repoUrl }) => {
+export const KineticVideo: React.FC<KineticVideoProps> = ({ scenes, repoName, repoUrl, theme }) => {
   const { fps } = useVideoConfig()
 
   return (
@@ -407,7 +428,7 @@ export const KineticVideo: React.FC<KineticVideoProps> = ({ scenes, repoName, re
         {scenes.map((scene, i) => (
           <React.Fragment key={scene.id}>
             <TransitionSeries.Sequence durationInFrames={scene.duration * fps}>
-              <KineticSceneRouter scene={scene} repoName={repoName} repoUrl={repoUrl} index={i} />
+              <KineticSceneRouter scene={scene} repoName={repoName} repoUrl={repoUrl} index={i} theme={theme} />
             </TransitionSeries.Sequence>
             {i < scenes.length - 1 && (
               <TransitionSeries.Transition

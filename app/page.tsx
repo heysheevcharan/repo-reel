@@ -64,6 +64,7 @@ export default function Home() {
           repoName: repoData?.repoName,
           repoUrl,
           template,
+          theme: repoData?.theme,
         }),
       })
 

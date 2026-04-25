@@ -3,6 +3,7 @@ import fs from 'fs'
 import { bundle } from '@remotion/bundler'
 import { renderMedia, selectComposition } from '@remotion/renderer'
 import { ScriptScene } from './scriptGenerator'
+import { ProjectTheme } from './types'
 import { calcDurationInFrames, calcKineticDurationInFrames } from './remotion/duration'
 
 export interface RenderResult {
@@ -40,7 +41,8 @@ export async function renderVideo(
   scenes: ScriptScene[],
   repoName: string,
   repoUrl: string,
-  template: 'launch' | 'kinetic' = 'launch'
+  template: 'launch' | 'kinetic' = 'launch',
+  theme?: ProjectTheme
 ): Promise<RenderResult> {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true })
 
@@ -55,10 +57,12 @@ export async function renderVideo(
     ? calcKineticDurationInFrames(scenes, fps)
     : calcDurationInFrames(scenes, fps)
 
+  const inputProps = { scenes, repoName, repoUrl, theme }
+
   const composition = await selectComposition({
     serveUrl: bundled,
     id: compositionId,
-    inputProps: { scenes, repoName, repoUrl },
+    inputProps,
   })
 
   await renderMedia({
@@ -67,12 +71,12 @@ export async function renderVideo(
       durationInFrames,
       width: 1920,
       height: 1080,
-      defaultProps: { scenes, repoName, repoUrl },
+      defaultProps: inputProps,
     },
     serveUrl: bundled,
     codec: 'h264',
     outputLocation: outputFile,
-    inputProps: { scenes, repoName, repoUrl },
+    inputProps,
     chromiumOptions: { disableWebSecurity: true },
   })
 

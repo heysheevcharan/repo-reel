@@ -16,6 +16,11 @@ const SCENE_TEMPLATES: Pick<ScriptScene, 'id' | 'title' | 'duration'>[] = [
 export const TOTAL_DURATION_SECONDS = SCENE_TEMPLATES.reduce((s, sc) => s + sc.duration, 0)
 
 export async function generateVideoScript(repoData: GitHubRepoData): Promise<ScriptScene[]> {
+  // Extract install command to inform scene 5 narrative
+  const installCommand = repoData.packageJson?.name
+    ? (repoData.packageJson.bin ? `npx ${repoData.packageJson.name}` : `npm install ${repoData.packageJson.name}`)
+    : repoData.readme.match(/```(?:bash|sh)?\n((?:npm|pip|cargo|go get|yarn|pnpm)[^\n]{2,50})/m)?.[1]?.trim()
+
   const prompt = `You are an elite creative director writing a 30-second product launch video script for a GitHub repo.
 
 Think: Apple launch energy. Linear.app aesthetic. Viral YC startup video.
@@ -26,7 +31,9 @@ Repository:
 - Description: ${repoData.description || 'No description'}
 - Language: ${repoData.language}
 - Stars: ${repoData.stars}
+- Forks: ${repoData.forks}
 - Topics: ${repoData.topics.join(', ')}
+- Install command: ${installCommand ?? 'see README'}
 - README: ${repoData.readme.slice(0, 600)}
 
 Generate content for EXACTLY these 5 scenes in this EXACT order:
@@ -35,7 +42,7 @@ scene1 "Hook" (5s) — Pattern interrupt. One bold claim. Make someone stop scro
 scene2 "Problem" (7s) — The painful reality developers face without this. Be specific and felt.
 scene3 "Solution" (7s) — How ${repoData.repo} obliterates that problem. The aha moment.
 scene4 "Features" (6s) — Exactly 4 rapid-fire killer features. Short, punchy, specific.
-scene5 "Get Started" (5s) — The CTA. Clear action. Mention stars and language.
+scene5 "Get Started" (5s) — The CTA. If an install command is available, use it verbatim in the narrative.
 
 Return ONLY a JSON array of 5 objects. Each object:
 {
