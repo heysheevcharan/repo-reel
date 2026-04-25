@@ -1,13 +1,29 @@
-import { Scene } from '@/lib/types'
+import { renderVideo } from '@/lib/videoRenderer'
 
 export async function POST(request: Request) {
-  const { scenes } = await request.json()
+  try {
+    const { scenes, repoName, repoUrl } = await request.json()
 
-  // Simulate 3 second rendering time
-  await new Promise((resolve) => setTimeout(resolve, 3000))
+    if (!scenes || !Array.isArray(scenes)) {
+      return Response.json({ error: 'Scenes required' }, { status: 400 })
+    }
 
-  // Return mock video URL
-  const videoUrl = '/mock-video.mp4'
+    console.log('[v0] Starting video render for:', repoName)
 
-  return Response.json({ videoUrl })
+    // Render the video
+    const result = await renderVideo(scenes, repoName, repoUrl)
+
+    return Response.json({
+      success: true,
+      videoUrl: result.videoUrl,
+      duration: result.duration,
+      format: result.format,
+    })
+  } catch (error: any) {
+    console.error('[v0] Render API error:', error)
+    return Response.json(
+      { error: error.message || 'Failed to render video' },
+      { status: 500 }
+    )
+  }
 }

@@ -9,7 +9,7 @@ import { RepoSummaryPanel } from './RepoSummaryPanel'
 interface ScriptEditorProps {
   data: RepoData
   onBack: () => void
-  onRender: (scenes: typeof data.scenes) => void
+  onRender: (scenes: RepoData['scriptScenes']) => void
 }
 
 export function ScriptEditor({
@@ -17,12 +17,12 @@ export function ScriptEditor({
   onBack,
   onRender,
 }: ScriptEditorProps) {
-  const [scenes, setScenes] = useState(data.scenes)
+  const [scenes, setScenes] = useState(data.scriptScenes)
 
   const handleSceneTextChange = (sceneId: string, newText: string) => {
     setScenes((prev) =>
       prev.map((scene) =>
-        scene.id === sceneId ? { ...scene, text: newText } : scene
+        scene.id === sceneId ? { ...scene, narrative: newText } : scene
       )
     )
   }

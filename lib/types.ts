@@ -1,29 +1,21 @@
-export type SceneType = 'hook' | 'problem' | 'solution' | 'unique-angle' | 'social-proof' | 'cta'
-
-export interface Scene {
+export interface ScriptScene {
   id: string
-  type: SceneType
-  label: string
-  text: string
-  maxChars: number
-  durationSeconds: number
-}
-
-export interface Competitor {
-  name: string
+  title: string
+  duration: number
+  narrative: string
+  visuals: string
 }
 
 export interface RepoData {
-  repoId: string
-  name: string
+  repoName: string
+  repoUrl: string
   description: string
-  logoUrl: string | null
-  screenshotUrls: string[]
-  techStack: string[]
-  competitors: Competitor[]
-  uniqueAngle: string
-  scenes: Scene[]
+  stars: number
+  language: string
+  topics: string[]
+  scriptScenes: ScriptScene[]
   totalDurationSeconds: number
+  analysisTimestamp: string
 }
 
 export type ScreenState = 'landing' | 'progress' | 'editor' | 'output'
