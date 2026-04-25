@@ -21,12 +21,12 @@ export function VideoOutput({ repoName, duration, onEdit, videoUrl }: VideoOutpu
         </div>
         <h1 className="text-2xl font-bold text-white mb-2">Your reel is ready.</h1>
         <p className="text-sm text-white/50 font-mono">
-          {repoName} · {duration} seconds · 1080×1920
+          {repoName} · {duration} seconds · 1920×1080
         </p>
       </div>
 
-      <div className="mb-8 w-full max-w-sm">
-        <div className="rounded-xl overflow-hidden border border-white/10 bg-black" style={{ aspectRatio: '9/16' }}>
+      <div className="mb-8 w-full max-w-3xl">
+        <div className="rounded-xl overflow-hidden border border-white/10 bg-black" style={{ aspectRatio: '16/9' }}>
           {videoUrl ? (
             <video
               src={videoUrl}
@@ -45,7 +45,7 @@ export function VideoOutput({ repoName, duration, onEdit, videoUrl }: VideoOutpu
         </div>
       </div>
 
-      <div className="flex gap-4 mb-12 max-w-sm w-full">
+      <div className="flex gap-4 mb-12 max-w-3xl w-full">
         {videoUrl ? (
           <a href={videoUrl} download className="flex-1">
             <Button

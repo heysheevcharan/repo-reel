@@ -47,7 +47,8 @@ export async function renderVideo(
 
   const fps = 30
   const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0)
-  const durationInFrames = totalDuration * fps
+  const { calcDurationInFrames } = await import('./remotion/Root')
+  const durationInFrames = calcDurationInFrames(scenes, fps)
 
   const composition = await selectComposition({
     serveUrl: bundled,
@@ -59,6 +60,8 @@ export async function renderVideo(
     composition: {
       ...composition,
       durationInFrames,
+      width: 1920,
+      height: 1080,
       defaultProps: { scenes, repoName, repoUrl },
     },
     serveUrl: bundled,

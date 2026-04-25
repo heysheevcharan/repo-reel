@@ -6,6 +6,7 @@ const nextConfig = {
   serverExternalPackages: [
     '@remotion/bundler',
     '@remotion/renderer',
+    '@remotion/transitions',
     '@remotion/compositor-darwin-arm64',
     '@remotion/compositor-linux-x64-gnu',
     '@remotion/compositor-linux-x64-musl',

@@ -1,7 +1,9 @@
 import React from 'react'
 import { Composition, registerRoot } from 'remotion'
-import { RepoReelVideo } from './VideoComposition'
+import { RepoReelVideo, VideoProps, TRANSITION_FRAMES } from './VideoComposition'
 import { ScriptScene } from '../scriptGenerator'
+
+const FPS = 30
 
 const DEFAULT_SCENES: ScriptScene[] = [
   { id: 'scene1', title: 'Hook', duration: 10, narrative: 'Sample hook narrative.', visuals: '' },
@@ -10,7 +12,11 @@ const DEFAULT_SCENES: ScriptScene[] = [
   { id: 'scene4', title: 'CTA', duration: 15, narrative: 'Sample call to action.', visuals: '' },
 ]
 
-const TOTAL_DURATION = DEFAULT_SCENES.reduce((s, sc) => s + sc.duration, 0)
+export function calcDurationInFrames(scenes: ScriptScene[], fps: number): number {
+  const totalSceneFrames = scenes.reduce((s, sc) => s + sc.duration * fps, 0)
+  const transitionFrames = (scenes.length - 1) * TRANSITION_FRAMES
+  return totalSceneFrames - transitionFrames
+}
 
 const RemotionRoot: React.FC = () => {
   return (
@@ -18,15 +24,17 @@ const RemotionRoot: React.FC = () => {
       id="RepoReelVideo"
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       component={RepoReelVideo as any}
-      durationInFrames={TOTAL_DURATION * 30}
-      fps={30}
-      width={1080}
-      height={1920}
-      defaultProps={{
-        scenes: DEFAULT_SCENES,
-        repoName: 'repo-reel',
-        repoUrl: 'https://github.com/heysheevcharan/repo-reel',
-      }}
+      durationInFrames={calcDurationInFrames(DEFAULT_SCENES, FPS)}
+      fps={FPS}
+      width={1920}
+      height={1080}
+      defaultProps={
+        {
+          scenes: DEFAULT_SCENES,
+          repoName: 'repo-reel',
+          repoUrl: 'https://github.com/heysheevcharan/repo-reel',
+        } satisfies VideoProps
+      }
     />
   )
 }
