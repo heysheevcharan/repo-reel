@@ -2,16 +2,18 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { RepoData } from '@/lib/types'
+import { RepoData, AudioConfig } from '@/lib/types'
+import { DEFAULT_AUDIO_CONFIG } from '@/lib/audioConfig'
 import { SceneCard } from './SceneCard'
 import { RepoSummaryPanel } from './RepoSummaryPanel'
+import { AudioPanel } from './AudioPanel'
 
 type Template = 'launch' | 'kinetic'
 
 interface ScriptEditorProps {
   data: RepoData
   onBack: () => void
-  onRender: (scenes: RepoData['scriptScenes'], template: Template) => void
+  onRender: (scenes: RepoData['scriptScenes'], template: Template, audioConfig: AudioConfig) => void
   isRendering?: boolean
 }
 
@@ -23,6 +25,7 @@ export function ScriptEditor({
 }: ScriptEditorProps) {
   const [scenes, setScenes] = useState(data.scriptScenes)
   const [template, setTemplate] = useState<Template>('launch')
+  const [audioConfig, setAudioConfig] = useState<AudioConfig>(DEFAULT_AUDIO_CONFIG)
 
   const handleSceneTextChange = (sceneId: string, newText: string) => {
     setScenes((prev) =>
@@ -33,7 +36,7 @@ export function ScriptEditor({
   }
 
   const handleRender = () => {
-    onRender(scenes, template)
+    onRender(scenes, template, audioConfig)
   }
 
   return (
@@ -124,9 +127,10 @@ export function ScriptEditor({
           </div>
         </div>
 
-        {/* Right column - Summary panel */}
-        <div>
+        {/* Right column - Summary panel + Audio */}
+        <div className="space-y-6">
           <RepoSummaryPanel data={data} />
+          <AudioPanel config={audioConfig} onChange={setAudioConfig} />
         </div>
       </div>
     </div>

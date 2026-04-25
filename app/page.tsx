@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { ScreenState, RepoData, ScriptScene } from '@/lib/types'
+import { ScreenState, RepoData, ScriptScene, AudioConfig } from '@/lib/types'
 import { LandingScreen } from '@/components/LandingScreen'
 import { ProgressScreen } from '@/components/ProgressScreen'
 import { ScriptEditor } from '@/components/ScriptEditor'
 import { VideoOutput } from '@/components/VideoOutput'
 import type { ProjectTheme } from '@/lib/types'
+import { DEFAULT_AUDIO_CONFIG } from '@/lib/audioConfig'
 
 export default function Home() {
   const [screen, setScreen] = useState<ScreenState>('landing')
@@ -18,6 +19,7 @@ export default function Home() {
   const [outputScenes, setOutputScenes] = useState<ScriptScene[]>([])
   const [outputTemplate, setOutputTemplate] = useState<'launch' | 'kinetic'>('launch')
   const [outputTheme, setOutputTheme] = useState<ProjectTheme | undefined>()
+  const [outputAudioConfig, setOutputAudioConfig] = useState<AudioConfig>(DEFAULT_AUDIO_CONFIG)
 
   const extractRepoName = (url: string): string => {
     const parts = url.replace('https://github.com/', '').split('/')
@@ -56,10 +58,11 @@ export default function Home() {
     setScreen('editor')
   }
 
-  const handleRender = (scenes: ScriptScene[], template: 'launch' | 'kinetic' = 'launch') => {
+  const handleRender = (scenes: ScriptScene[], template: 'launch' | 'kinetic' = 'launch', audioConfig: AudioConfig = DEFAULT_AUDIO_CONFIG) => {
     setOutputScenes(scenes)
     setOutputTemplate(template)
     setOutputTheme(repoData?.theme)
+    setOutputAudioConfig(audioConfig)
     setScreen('output')
   }
 
@@ -88,7 +91,7 @@ export default function Home() {
         <LandingScreen onSubmit={handleLandingSubmit} />
       )}
 
-      {screen === 'progress' && repoData && (
+      {screen === 'progress' && (
         <ProgressScreen
           repoName={extractRepoName(repoUrl)}
           onComplete={handleProgressComplete}
@@ -112,6 +115,7 @@ export default function Home() {
           scenes={outputScenes}
           template={outputTemplate}
           theme={outputTheme}
+          audioConfig={outputAudioConfig}
           onEdit={handleEditBack}
         />
       )}

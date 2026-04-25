@@ -1,3 +1,18 @@
+export type VoiceStyle = 'confident' | 'casual' | 'cinematic' | 'energetic'
+
+export interface MusicTrack {
+  id: string
+  label: string
+  url: string
+}
+
+export interface AudioConfig {
+  voiceStyle: VoiceStyle
+  musicTrackId: string
+  voiceVolume: number   // 0–1
+  musicVolume: number   // 0–1
+}
+
 export interface ScriptScene {
   id: string
   title: string

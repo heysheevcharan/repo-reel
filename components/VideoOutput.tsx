@@ -7,7 +7,7 @@ import { RepoReelVideo } from '@/lib/remotion/VideoComposition'
 import { KineticVideo } from '@/lib/remotion/KineticComposition'
 import { calcDurationInFrames, calcKineticDurationInFrames } from '@/lib/remotion/duration'
 import type { ScriptScene } from '@/lib/scriptGenerator'
-import type { ProjectTheme } from '@/lib/types'
+import type { ProjectTheme, AudioConfig } from '@/lib/types'
 
 const FPS = 30
 
@@ -17,17 +17,18 @@ interface VideoOutputProps {
   scenes: ScriptScene[]
   template: 'launch' | 'kinetic'
   theme?: ProjectTheme
+  audioConfig?: AudioConfig
   onEdit: () => void
 }
 
-export function VideoOutput({ repoName, repoUrl, scenes, template, theme, onEdit }: VideoOutputProps) {
+export function VideoOutput({ repoName, repoUrl, scenes, template, theme, audioConfig, onEdit }: VideoOutputProps) {
   const isKinetic = template === 'kinetic'
   const component = isKinetic ? KineticVideo : RepoReelVideo
   const durationInFrames = isKinetic
     ? calcKineticDurationInFrames(scenes, FPS)
     : calcDurationInFrames(scenes, FPS)
 
-  const inputProps = { scenes, repoName, repoUrl, theme }
+  const inputProps = { scenes, repoName, repoUrl, theme, audioConfig }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 bg-gradient-to-b from-background to-background">

@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   AbsoluteFill,
+  Audio,
   Easing,
   Img,
   Sequence,
@@ -12,13 +13,15 @@ import {
 import { TransitionSeries, linearTiming } from '@remotion/transitions'
 import { fade } from '@remotion/transitions/fade'
 import type { ScriptScene } from '../scriptGenerator'
-import type { ProjectTheme } from '../types'
+import type { ProjectTheme, AudioConfig } from '../types'
+import { MUSIC_TRACKS } from '../audioConfig'
 
 export type VideoProps = {
   scenes: ScriptScene[]
   repoName: string
   repoUrl: string
   theme?: ProjectTheme
+  audioConfig?: AudioConfig
 }
 
 // Keep in sync with LAUNCH_TRANSITION_FRAMES in duration.ts
@@ -631,11 +634,28 @@ function SceneRouter({ scene, repoName, repoUrl, theme }: {
 
 // ─── Root composition ─────────────────────────────────────────────────────────
 
-export const RepoReelVideo: React.FC<VideoProps> = ({ scenes, repoName, repoUrl, theme }) => {
+export const RepoReelVideo: React.FC<VideoProps> = ({ scenes, repoName, repoUrl, theme, audioConfig }) => {
   const { fps } = useVideoConfig()
+
+  // Resolve music track URL
+  const musicUrl = audioConfig
+    ? MUSIC_TRACKS.find((t) => t.id === audioConfig.musicTrackId)?.url
+    : undefined
+  const musicVolume = audioConfig?.musicVolume ?? 0.3
 
   return (
     <AbsoluteFill style={{ backgroundColor: theme?.backgroundColor ?? '#050505' }}>
+      {/* Background music — looped, with fade-in */}
+      {musicUrl && (
+        <Audio
+          src={musicUrl}
+          loop
+          volume={(f) =>
+            interpolate(f, [0, fps], [0, musicVolume], { extrapolateRight: 'clamp' })
+          }
+        />
+      )}
+
       <TransitionSeries>
         {scenes.map((scene, i) => (
           <React.Fragment key={scene.id}>

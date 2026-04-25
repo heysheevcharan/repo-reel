@@ -4,6 +4,7 @@ import { RepoReelVideo, VideoProps } from './VideoComposition'
 import { KineticVideo, KineticVideoProps } from './KineticComposition'
 import { calcDurationInFrames, calcKineticDurationInFrames } from './duration'
 import { ScriptScene } from '../scriptGenerator'
+import { DEFAULT_AUDIO_CONFIG } from '../audioConfig'
 
 export { calcDurationInFrames, calcKineticDurationInFrames }
 
@@ -34,6 +35,7 @@ const RemotionRoot: React.FC = () => {
             scenes: DEFAULT_SCENES,
             repoName: 'repo-reel',
             repoUrl: 'https://github.com/heysheevcharan/repo-reel',
+            audioConfig: DEFAULT_AUDIO_CONFIG,
           } satisfies VideoProps
         }
       />
@@ -50,6 +52,7 @@ const RemotionRoot: React.FC = () => {
             scenes: DEFAULT_SCENES,
             repoName: 'repo-reel',
             repoUrl: 'https://github.com/heysheevcharan/repo-reel',
+            audioConfig: DEFAULT_AUDIO_CONFIG,
           } satisfies KineticVideoProps
         }
       />

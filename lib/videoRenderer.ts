@@ -3,7 +3,7 @@ import fs from 'fs'
 import { bundle } from '@remotion/bundler'
 import { renderMedia, selectComposition } from '@remotion/renderer'
 import { ScriptScene } from './scriptGenerator'
-import { ProjectTheme } from './types'
+import { ProjectTheme, AudioConfig } from './types'
 import { calcDurationInFrames, calcKineticDurationInFrames } from './remotion/duration'
 
 export interface RenderResult {
@@ -42,7 +42,8 @@ export async function renderVideo(
   repoName: string,
   repoUrl: string,
   template: 'launch' | 'kinetic' = 'launch',
-  theme?: ProjectTheme
+  theme?: ProjectTheme,
+  audioConfig?: AudioConfig
 ): Promise<RenderResult> {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true })
 
@@ -57,7 +58,7 @@ export async function renderVideo(
     ? calcKineticDurationInFrames(scenes, fps)
     : calcDurationInFrames(scenes, fps)
 
-  const inputProps = { scenes, repoName, repoUrl, theme }
+  const inputProps = { scenes, repoName, repoUrl, theme, audioConfig }
 
   const composition = await selectComposition({
     serveUrl: bundled,
