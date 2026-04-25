@@ -70,7 +70,7 @@ export function VideoOutput({
 
       {/* Footer */}
       <div className="text-center text-xs text-white/40">
-        <p className="mb-2">Built at Zero to Agent · Bengaluru · April 2025</p>
+        <p className="mb-2">Built at Zero to Agent · Bengaluru · April 2026</p>
         <a
           href="#"
           className="text-indigo-400 hover:text-indigo-300 transition-colors"
