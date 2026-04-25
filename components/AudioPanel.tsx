@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import type { AudioConfig } from '@/lib/types'
-import { VOICE_STYLES, MUSIC_TRACKS } from '@/lib/audioConfig'
+import { MUSIC_TRACKS } from '@/lib/audioConfig'
 
 interface AudioPanelProps {
   config: AudioConfig
@@ -55,30 +55,6 @@ export function AudioPanel({ config, onChange }: AudioPanelProps) {
   return (
     <div className="bg-white/5 border border-white/10 rounded-lg backdrop-blur-sm p-6">
       <h3 className="text-sm font-semibold text-white mb-6">Audio</h3>
-
-      {/* ─── Voice Style ──────────────────────────────────────────── */}
-      <div className="mb-8">
-        <div className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-mono mb-4">
-          Voice Style
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {VOICE_STYLES.map((v) => (
-            <button
-              key={v.id}
-              onClick={() => update({ voiceStyle: v.id })}
-              title={v.desc}
-              className={[
-                'px-3 py-2 rounded-md text-xs font-medium transition-all duration-300 text-center border',
-                config.voiceStyle === v.id
-                  ? 'bg-indigo-500/10 text-white border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.1)]'
-                  : 'bg-white/2 text-white/50 border-white/5 hover:border-white/20 hover:text-white/80',
-              ].join(' ')}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* ─── Music Track ──────────────────────────────────────────── */}
       <div className="mb-8">
@@ -182,12 +158,6 @@ export function AudioPanel({ config, onChange }: AudioPanelProps) {
             showFineTune ? 'max-h-40 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0',
           ].join(' ')}
         >
-          <VolumeSlider
-            label="Voiceover"
-            value={config.voiceVolume}
-            onChange={(v) => update({ voiceVolume: v })}
-          />
-          <div className="h-3" />
           <VolumeSlider
             label="Music"
             value={config.musicVolume}

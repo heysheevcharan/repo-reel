@@ -1,13 +1,4 @@
-import type { AudioConfig, MusicTrack, VoiceStyle } from './types'
-
-// ─── Voice Styles ─────────────────────────────────────────────────────────────
-
-export const VOICE_STYLES: { id: VoiceStyle; label: string; desc: string }[] = [
-  { id: 'confident',  label: 'Confident',  desc: 'Clear and authoritative' },
-  { id: 'casual',     label: 'Casual',     desc: 'Friendly and relaxed' },
-  { id: 'cinematic',  label: 'Cinematic',  desc: 'Dramatic and epic' },
-  { id: 'energetic',  label: 'Energetic',  desc: 'High energy, fast-paced' },
-]
+import type { AudioConfig, MusicTrack } from './types'
 
 // ─── Curated Music Tracks ─────────────────────────────────────────────────────
 
@@ -32,9 +23,7 @@ export const MUSIC_TRACKS: MusicTrack[] = [
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
 export const DEFAULT_AUDIO_CONFIG: AudioConfig = {
-  voiceStyle: 'confident',
   musicTrackId: 'motivational-1',
-  voiceVolume: 1.0,
   musicVolume: 0.3,
 }
 

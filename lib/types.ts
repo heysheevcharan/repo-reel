@@ -1,5 +1,3 @@
-export type VoiceStyle = 'confident' | 'casual' | 'cinematic' | 'energetic'
-
 export interface MusicTrack {
   id: string
   label: string
@@ -7,9 +5,7 @@ export interface MusicTrack {
 }
 
 export interface AudioConfig {
-  voiceStyle: VoiceStyle
   musicTrackId: string
-  voiceVolume: number   // 0–1
   musicVolume: number   // 0–1
 }
 
