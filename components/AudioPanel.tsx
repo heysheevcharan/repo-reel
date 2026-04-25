@@ -57,21 +57,21 @@ export function AudioPanel({ config, onChange }: AudioPanelProps) {
       <h3 className="text-sm font-semibold text-white mb-6">Audio</h3>
 
       {/* ─── Voice Style ──────────────────────────────────────────── */}
-      <div className="mb-6">
-        <div className="text-xs text-white/50 uppercase tracking-wide font-mono mb-3">
+      <div className="mb-8">
+        <div className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-mono mb-4">
           Voice Style
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {VOICE_STYLES.map((v) => (
             <button
               key={v.id}
               onClick={() => update({ voiceStyle: v.id })}
               title={v.desc}
               className={[
-                'px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200',
+                'px-3 py-2 rounded-md text-xs font-medium transition-all duration-300 text-center border',
                 config.voiceStyle === v.id
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/50 shadow-[0_0_12px_rgba(99,102,241,0.15)]'
-                  : 'bg-white/5 text-white/50 border border-white/10 hover:border-white/20 hover:text-white/70',
+                  ? 'bg-indigo-500/10 text-white border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.1)]'
+                  : 'bg-white/2 text-white/50 border-white/5 hover:border-white/20 hover:text-white/80',
               ].join(' ')}
             >
               {v.label}
@@ -81,11 +81,11 @@ export function AudioPanel({ config, onChange }: AudioPanelProps) {
       </div>
 
       {/* ─── Music Track ──────────────────────────────────────────── */}
-      <div className="mb-6">
-        <div className="text-xs text-white/50 uppercase tracking-wide font-mono mb-3">
+      <div className="mb-8">
+        <div className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-mono mb-4">
           Background Music
         </div>
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {MUSIC_TRACKS.map((track) => {
             const isSelected = config.musicTrackId === track.id
             const isPlaying = playingTrackId === track.id
@@ -96,25 +96,25 @@ export function AudioPanel({ config, onChange }: AudioPanelProps) {
                 key={track.id}
                 onClick={() => update({ musicTrackId: track.id })}
                 className={[
-                  'group flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200',
+                  'group flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-300 border',
                   isSelected
-                    ? 'bg-indigo-500/10 border border-indigo-500/30'
-                    : 'bg-transparent border border-transparent hover:bg-white/5',
+                    ? 'bg-white/10 border-white/10 shadow-sm'
+                    : 'bg-transparent border-transparent hover:bg-white/5',
                 ].join(' ')}
               >
-                {/* Accent bar */}
+                {/* Selection Dot */}
                 <div
                   className={[
-                    'w-0.5 h-5 rounded-full transition-all duration-300',
-                    isSelected ? 'bg-indigo-500' : 'bg-transparent',
+                    'w-1.5 h-1.5 rounded-full transition-all duration-500',
+                    isSelected ? 'bg-indigo-400 scale-110 shadow-[0_0_8px_rgba(129,140,248,0.6)]' : 'bg-white/10',
                   ].join(' ')}
                 />
 
                 {/* Label */}
                 <span
                   className={[
-                    'text-sm flex-1 transition-colors duration-200',
-                    isSelected ? 'text-white font-medium' : 'text-white/60',
+                    'text-sm flex-1 transition-colors duration-300',
+                    isSelected ? 'text-white font-medium' : 'text-white/60 group-hover:text-white/80',
                   ].join(' ')}
                 >
                   {track.label}

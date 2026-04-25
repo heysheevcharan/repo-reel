@@ -128,7 +128,7 @@ export function ScriptEditor({
         </div>
 
         {/* Right column - Summary panel + Audio */}
-        <div className="space-y-6">
+        <div className="space-y-6 sticky top-8 h-fit">
           <RepoSummaryPanel data={data} />
           <AudioPanel config={audioConfig} onChange={setAudioConfig} />
         </div>

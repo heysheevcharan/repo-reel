@@ -8,7 +8,7 @@ interface RepoSummaryPanelProps {
 
 export function RepoSummaryPanel({ data }: RepoSummaryPanelProps) {
   return (
-    <div className="sticky top-8 bg-white/5 border border-white/10 rounded-lg backdrop-blur-sm p-6">
+    <div className="bg-white/5 border border-white/10 rounded-lg backdrop-blur-sm p-6">
       <h3 className="text-sm font-semibold text-white mb-6">Repository Info</h3>
 
       {/* Project section */}
