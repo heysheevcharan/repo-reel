@@ -198,8 +198,8 @@ function HookScene({ scene, repoName, theme }: { scene: ScriptScene; repoName: s
       <BottomBar sceneId={scene.id} theme={theme} />
 
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '0 80px' }}>
-        {/* Owner avatar */}
-        {theme?.avatarUrl && (
+        {/* Project logo (README-extracted) or owner avatar fallback */}
+        {(theme?.logoUrl ?? theme?.avatarUrl) && (
           <div style={{
             marginBottom: 28,
             opacity: avatarOpacity,
@@ -207,11 +207,16 @@ function HookScene({ scene, repoName, theme }: { scene: ScriptScene; repoName: s
             display: 'flex', justifyContent: 'center',
           }}>
             <Img
-              src={theme.avatarUrl}
+              src={theme.logoUrl ?? theme.avatarUrl}
               style={{
-                width: 96, height: 96, borderRadius: '50%',
-                border: `2px solid ${pal.primary}60`,
-                boxShadow: `0 0 24px ${pal.primary}40`,
+                // Logo: natural size up to 160px tall, no circle crop
+                // Avatar fallback: circular treatment
+                maxHeight: 120,
+                maxWidth: 320,
+                borderRadius: theme.logoUrl ? 12 : '50%',
+                border: `1px solid ${pal.primary}40`,
+                boxShadow: `0 0 28px ${pal.primary}30`,
+                objectFit: 'contain',
               }}
             />
           </div>

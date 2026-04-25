@@ -14,7 +14,8 @@ export interface ProjectTheme {
   backgroundColor: string     // video background
   isDark: boolean             // dark or light aesthetic
   mood: 'minimal' | 'energetic' | 'technical' | 'playful' | 'enterprise'
-  avatarUrl: string           // owner avatar as data URL
+  avatarUrl: string           // owner avatar as data URL (fallback)
+  logoUrl?: string            // README-extracted project logo as data URL (preferred)
   socialPreviewUrl?: string   // og:image as data URL
   installCommand?: string     // e.g. "npm install shadcn"
   websiteUrl?: string

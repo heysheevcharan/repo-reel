@@ -43,6 +43,74 @@ async function scrapeMetaTags(url: string): Promise<{ themeColor?: string; ogIma
   }
 }
 
+const BADGE_PATTERNS = [
+  'shields.io', 'badge.fury.io', 'badgen.net', 'badge.svg',
+  'github.com/actions', 'github.com/workflows', 'circleci.com',
+  'travis-ci', 'codecov.io', 'coveralls.io', 'snyk.io',
+  'buymeacoffee', 'ko-fi', 'patreon', '?style=', '?branch=',
+]
+
+function isBadgeUrl(url: string): boolean {
+  const lower = url.toLowerCase()
+  return BADGE_PATTERNS.some(p => lower.includes(p))
+}
+
+function resolveReadmeImageUrl(src: string, owner: string, repo: string): string {
+  if (src.startsWith('http://') || src.startsWith('https://')) return src
+  // Relative path → raw.githubusercontent.com
+  const clean = src.replace(/^\.?\//, '')
+  return `https://raw.githubusercontent.com/${owner}/${repo}/main/${clean}`
+}
+
+async function extractLogoFromReadme(
+  readme: string,
+  owner: string,
+  repo: string
+): Promise<string | undefined> {
+  // Only scan the first 40 lines — logos are always at the top
+  const topSection = readme.split('\n').slice(0, 40).join('\n')
+
+  const candidates: string[] = []
+
+  // Match markdown images: ![alt](url)
+  const mdMatches = [...topSection.matchAll(/!\[[^\]]*\]\(([^)\s"]+)/g)]
+  for (const m of mdMatches) candidates.push(m[1])
+
+  // Match HTML img tags: <img src="url"
+  const htmlMatches = [...topSection.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)]
+  for (const m of htmlMatches) candidates.push(m[1])
+
+  for (const raw of candidates) {
+    if (isBadgeUrl(raw)) continue
+    // Prefer known logo-like filenames
+    const lower = raw.toLowerCase()
+    const isLikelyLogo =
+      lower.includes('logo') ||
+      lower.includes('icon') ||
+      lower.includes('banner') ||
+      lower.endsWith('.svg') ||
+      lower.endsWith('.png') ||
+      lower.endsWith('.jpg') ||
+      lower.endsWith('.gif') ||
+      lower.endsWith('.webp')
+    if (!isLikelyLogo) continue
+
+    const resolved = resolveReadmeImageUrl(raw, owner, repo)
+    const dataUrl = await toDataUrl(resolved)
+    if (dataUrl) return dataUrl
+  }
+
+  // Second pass: accept any non-badge image if no logo-named one found
+  for (const raw of candidates) {
+    if (isBadgeUrl(raw)) continue
+    const resolved = resolveReadmeImageUrl(raw, owner, repo)
+    const dataUrl = await toDataUrl(resolved)
+    if (dataUrl) return dataUrl
+  }
+
+  return undefined
+}
+
 function extractInstallCommand(readme: string, pkg: Record<string, any>, language: string): string | undefined {
   // Derive from package.json
   if (pkg?.name) {
@@ -137,11 +205,12 @@ export async function extractProjectTheme(
   const avatarRawUrl = `https://github.com/${repoData.owner}.png`
 
   // Run everything in parallel
-  const [githubMeta, websiteMeta, moodResult, avatarDataUrl] = await Promise.all([
+  const [githubMeta, websiteMeta, moodResult, avatarDataUrl, logoDataUrl] = await Promise.all([
     scrapeMetaTags(`https://github.com/${repoData.owner}/${repoData.repo}`),
     homepage ? scrapeMetaTags(homepage) : Promise.resolve({}),
     inferMoodAndTheme(repoData),
     toDataUrl(avatarRawUrl),
+    extractLogoFromReadme(repoData.readme, repoData.owner, repoData.repo),
   ])
 
   // Resolve social preview as data URL if found
@@ -170,6 +239,7 @@ export async function extractProjectTheme(
     isDark,
     mood: moodResult.mood,
     avatarUrl: avatarDataUrl ?? avatarRawUrl,
+    logoUrl: logoDataUrl,             // README-extracted logo (preferred for video)
     socialPreviewUrl: socialPreviewDataUrl,
     installCommand,
     websiteUrl: homepage,
