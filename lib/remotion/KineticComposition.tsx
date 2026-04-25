@@ -22,11 +22,30 @@ export type KineticVideoProps = {
   audioConfig?: AudioConfig
 }
 
-export const KINETIC_TRANSITION_FRAMES = 2
+export const KINETIC_TRANSITION_FRAMES = 6
 
 // Max frames a single word stays on screen — keeps pace aggressive
-const MAX_FRAMES_PER_WORD = 16
-const MAX_FRAMES_PER_BULLET = 22
+const MAX_FRAMES_PER_WORD = 20
+const MIN_FRAMES_PER_WORD = 10
+const MAX_FRAMES_PER_BULLET = 26
+
+// ─── Motion constants ─────────────────────────────────────────────────────────
+
+const FONT = {
+  HEAVY:   '"Arial Black", "Impact", "Haas Grotesk Display", "Helvetica Neue", sans-serif',
+  DISPLAY: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+  MONO:    '"SF Mono", "JetBrains Mono", "Fira Code", Menlo, Monaco, "Courier New", monospace',
+}
+
+const SPRING = {
+  WORD:  { damping: 6,  stiffness: 420 }, // very snappy, intentional overshoot — kinetic words
+  SUB:   { damping: 16, stiffness: 150 }, // smooth settle — subtext reveals
+  BADGE: { damping: 10, stiffness: 250 }, // crisp — install badge, url card
+}
+
+const EASE = {
+  OUT_EXPO: (t: number) => 1 - Math.pow(1 - t, 4),
+}
 
 // Problem scene stays red; all others use brand color
 function sceneColor(sceneId: string, theme?: ProjectTheme): string {
@@ -71,8 +90,8 @@ function WordHit({
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
-  // Snappy, aggressive spring — hits fast, no wobble
-  const s = spring({ frame, fps, config: { damping: 9, stiffness: 380 } })
+  // Snappy, aggressive spring — hits fast, deliberate overshoot
+  const s = spring({ frame, fps, config: SPRING.WORD })
 
   const exitProgress =
     exitFrame != null
@@ -89,8 +108,9 @@ function WordHit({
     interpolate(s, [0, 0.2], [0, 1], { extrapolateRight: 'clamp' }) *
     interpolate(exitProgress, [0, 1], [1, 0])
 
-  // Letter spacing compresses as word slams in — very cinematic
-  const letterSpacing = interpolate(s, [0, 1], [40, -2])
+  // Letter spacing compresses as word slams in — eased so compression accelerates
+  const easedS = EASE.OUT_EXPO(Math.min(1, Math.max(0, s)))
+  const letterSpacing = interpolate(easedS, [0, 1], [40, -2])
 
   // Accent line draws in quickly
   const lineWidth = interpolate(frame, [0, 8], [0, 240], {
@@ -104,7 +124,7 @@ function WordHit({
         fontSize,
         fontWeight: 900,
         color,
-        fontFamily: '"Arial Black", "Helvetica Neue", Impact, sans-serif',
+        fontFamily: FONT.HEAVY,
         letterSpacing,
         textTransform: 'uppercase',
         lineHeight: 1,
@@ -131,13 +151,13 @@ function WordHit({
 function SubtextReveal({ text, color }: { text: string; color: string }) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
-  const s = spring({ frame, fps, config: { damping: 12, stiffness: 200 } })
+  const s = spring({ frame, fps, config: SPRING.SUB })
 
   return (
     <div style={{
       fontSize: 32,
-      fontFamily: '"Helvetica Neue", Arial, sans-serif',
-      fontWeight: 300,
+      fontFamily: FONT.DISPLAY,
+      fontWeight: 400,
       color,
       letterSpacing: 4,
       textTransform: 'uppercase',
@@ -175,9 +195,10 @@ function AccentLines({ color, frame }: { color: string; frame: number }) {
 
 function MicroMotionBg({ color }: { color: string }) {
   const frame = useCurrentFrame()
-  const breathe = 1 + 0.018 * Math.sin(frame * 0.09)
-  const driftX = 50 + 8 * Math.sin(frame * 0.04)
-  const driftY = 50 + 6 * Math.cos(frame * 0.05)
+  const breathe = 1 + 0.014 * Math.sin(frame * 0.07)
+  const intensityMod = 0.6 + 0.4 * Math.abs(Math.sin(frame * 0.018))
+  const driftX = 50 + 8 * Math.sin(frame * 0.035)
+  const driftY = 50 + 6 * Math.cos(frame * 0.045)
 
   return (
     <div style={{
@@ -186,7 +207,8 @@ function MicroMotionBg({ color }: { color: string }) {
     }}>
       <div style={{
         position: 'absolute', inset: 0,
-        background: `radial-gradient(ellipse at ${driftX}% ${driftY}%, ${color}22 0%, transparent 60%)`,
+        background: `radial-gradient(ellipse at ${driftX}% ${driftY}%, ${color}28 0%, transparent 60%)`,
+        opacity: intensityMod,
       }} />
     </div>
   )
@@ -206,7 +228,7 @@ function SceneIndexLabel({ index, title, color }: { index: number; title: string
       display: 'flex', alignItems: 'center', gap: 10, opacity,
     }}>
       <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color, boxShadow: `0 0 10px ${color}` }} />
-      <span style={{ color: '#ffffff50', fontSize: 12, fontFamily: 'monospace', letterSpacing: 4, textTransform: 'uppercase' }}>
+      <span style={{ color: '#ffffff50', fontSize: 12, fontFamily: FONT.MONO, letterSpacing: 4, textTransform: 'uppercase' }}>
         {String(index + 1).padStart(2, '0')} — {title}
       </span>
     </div>
@@ -226,9 +248,9 @@ function KineticSceneBase({
   const words = (scene.headline || scene.title).split(' ').filter(Boolean)
   const hasSubtext = !!scene.subtext
 
-  // Hard cap: no word stays on screen longer than MAX_FRAMES_PER_WORD
+  // Clamp between min and max — short words get at least MIN_FRAMES, long words don't overstay
   const naturalFramesPerWord = Math.floor(durationInFrames / (words.length + (hasSubtext ? 1 : 0)))
-  const framesPerWord = Math.min(MAX_FRAMES_PER_WORD, naturalFramesPerWord)
+  const framesPerWord = Math.max(MIN_FRAMES_PER_WORD, Math.min(MAX_FRAMES_PER_WORD, naturalFramesPerWord))
   const subtextStart = words.length * framesPerWord
 
   const fontSize =
@@ -286,8 +308,12 @@ function KineticFeaturesScene({ scene, index, theme }: { scene: ScriptScene; ind
   const accentColor = sceneColor(scene.id, theme)
   const bullets = scene.bullets?.filter(Boolean).slice(0, 4) ?? []
 
-  const naturalFramesPerBullet = Math.floor(durationInFrames / bullets.length)
-  const framesPerBullet = Math.min(MAX_FRAMES_PER_BULLET, naturalFramesPerBullet)
+  // Distribute frames proportionally by word count
+  const wordCounts = bullets.map(b => b.split(' ').length)
+  const totalWords = wordCounts.reduce((a, b) => a + b, 0)
+  const bulletFrames = wordCounts.map(wc => Math.max(MIN_FRAMES_PER_WORD * 2, Math.min(MAX_FRAMES_PER_BULLET, Math.floor((wc / totalWords) * durationInFrames))))
+  const bulletOffsets = bulletFrames.reduce<number[]>((acc, _, i) =>
+    [...acc, i === 0 ? 0 : acc[i - 1] + bulletFrames[i - 1]], [])
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000000' }}>
@@ -301,12 +327,12 @@ function KineticFeaturesScene({ scene, index, theme }: { scene: ScriptScene; ind
         const fontSize = wordCount <= 2 ? 210 : wordCount <= 4 ? 140 : 100
         const isLast = i === bullets.length - 1
         return (
-          <Sequence key={i} from={i * framesPerBullet} durationInFrames={isLast ? 9999 : framesPerBullet + 2} layout="none">
+          <Sequence key={i} from={bulletOffsets[i]} durationInFrames={isLast ? 9999 : bulletFrames[i] + 2} layout="none">
             <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
               <BulletCounter index={i} total={bullets.length} accentColor={accentColor} />
               <WordHit
                 text={bullet}
-                exitFrame={isLast ? undefined : framesPerBullet - 4}
+                exitFrame={isLast ? undefined : bulletFrames[i] - 4}
                 color="#ffffff"
                 fontSize={fontSize}
                 accentColor={accentColor}
@@ -323,10 +349,10 @@ function KineticFeaturesScene({ scene, index, theme }: { scene: ScriptScene; ind
 function BulletCounter({ index, total, accentColor }: { index: number; total: number; accentColor: string }) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
-  const s = spring({ frame, fps, config: { damping: 10, stiffness: 300 } })
+  const s = spring({ frame, fps, config: SPRING.BADGE })
   return (
     <div style={{
-      fontSize: 13, fontFamily: 'monospace', letterSpacing: 5,
+      fontSize: 13, fontFamily: FONT.MONO, letterSpacing: 5,
       color: accentColor, textTransform: 'uppercase',
       opacity: interpolate(s, [0, 1], [0, 1]),
     }}>
@@ -346,7 +372,7 @@ function KineticCTAScene({ scene, repoUrl, index, theme }: {
   const words = (scene.headline || 'Star on GitHub').split(' ').filter(Boolean)
 
   const naturalPerWord = Math.floor((durationInFrames * 0.55) / words.length)
-  const wordSlots = Math.min(MAX_FRAMES_PER_WORD, naturalPerWord)
+  const wordSlots = Math.max(MIN_FRAMES_PER_WORD, Math.min(MAX_FRAMES_PER_WORD, naturalPerWord))
   const urlStart = words.length * wordSlots
   const shortUrl = repoUrl.replace(/^https?:\/\//, '')
   const installCmd = theme?.installCommand
@@ -388,7 +414,7 @@ function KineticCTAScene({ scene, repoUrl, index, theme }: {
 function InstallBadge({ cmd, accentColor }: { cmd: string; accentColor: string }) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
-  const s = spring({ frame, fps, config: { damping: 10, stiffness: 250 } })
+  const s = spring({ frame, fps, config: SPRING.BADGE })
   return (
     <div style={{
       display: 'inline-flex', alignItems: 'center', gap: 12,
@@ -399,8 +425,8 @@ function InstallBadge({ cmd, accentColor }: { cmd: string; accentColor: string }
       opacity: interpolate(s, [0, 1], [0, 1]),
       transform: `translateY(${interpolate(s, [0, 1], [24, 0])}px)`,
     }}>
-      <span style={{ color: accentColor, fontSize: 16, fontFamily: 'monospace', letterSpacing: 2 }}>$</span>
-      <span style={{ color: '#ffffffee', fontSize: 20, fontFamily: 'monospace', letterSpacing: 0.5 }}>{cmd}</span>
+      <span style={{ color: accentColor, fontSize: 16, fontFamily: FONT.MONO, letterSpacing: 2 }}>$</span>
+      <span style={{ color: '#ffffffee', fontSize: 20, fontFamily: FONT.MONO, letterSpacing: 0.5 }}>{cmd}</span>
     </div>
   )
 }
@@ -408,7 +434,7 @@ function InstallBadge({ cmd, accentColor }: { cmd: string; accentColor: string }
 function UrlCard({ url, accentColor }: { url: string; accentColor: string }) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
-  const s = spring({ frame: Math.max(0, frame - 6), fps, config: { damping: 10, stiffness: 200 } })
+  const s = spring({ frame: Math.max(0, frame - 6), fps, config: SPRING.SUB })
   return (
     <div style={{
       display: 'inline-flex', alignItems: 'center', gap: 14,
@@ -420,7 +446,7 @@ function UrlCard({ url, accentColor }: { url: string; accentColor: string }) {
       transform: `translateY(${interpolate(s, [0, 1], [20, 0])}px)`,
     }}>
       <div style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: accentColor, boxShadow: `0 0 12px ${accentColor}` }} />
-      <span style={{ color: '#ffffffbb', fontSize: 20, fontFamily: 'monospace', letterSpacing: 1 }}>{url}</span>
+      <span style={{ color: '#ffffffbb', fontSize: 20, fontFamily: FONT.MONO, letterSpacing: 1 }}>{url}</span>
     </div>
   )
 }

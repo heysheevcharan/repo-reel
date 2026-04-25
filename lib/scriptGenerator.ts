@@ -21,52 +21,72 @@ export async function generateVideoScript(repoData: GitHubRepoData): Promise<Scr
     ? (repoData.packageJson.bin ? `npx ${repoData.packageJson.name}` : `npm install ${repoData.packageJson.name}`)
     : repoData.readme.match(/```(?:bash|sh)?\n((?:npm|pip|cargo|go get|yarn|pnpm)[^\n]{2,50})/m)?.[1]?.trim()
 
-  const prompt = `You are an elite creative director writing a 30-second product launch video script for a GitHub repo.
+  const activityContext = repoData.stars > 10000
+    ? `This is a major open-source project with ${repoData.stars.toLocaleString()} stars.`
+    : repoData.stars > 1000
+    ? `This is a popular project with ${repoData.stars.toLocaleString()} stars and real community traction.`
+    : `This is an emerging project with ${repoData.stars.toLocaleString()} stars.`
 
-Think: Apple launch energy. Linear.app aesthetic. Viral YC startup video.
-Every word must earn its place. Max 6 words per headline.
+  const prompt = `You are an elite creative director writing a 22-second product launch video script for a GitHub repository. Your output will be displayed word-by-word on screen at cinematic scale.
+
+Reference energy: Apple keynote, Linear.app launch, Vercel ship videos.
+Every single word is seen at 100px+ size. Vague words look weak. Specific words look powerful.
 
 Repository:
 - Name: ${repoData.repo}
 - Description: ${repoData.description || 'No description'}
 - Language: ${repoData.language}
-- Stars: ${repoData.stars}
-- Forks: ${repoData.forks}
-- Topics: ${repoData.topics.join(', ')}
-- Install command: ${installCommand ?? 'see README'}
-- README: ${repoData.readme.slice(0, 600)}
+- Stars: ${repoData.stars.toLocaleString()} | Forks: ${repoData.forks}
+- Topics: ${repoData.topics.slice(0, 8).join(', ')}
+- Install: ${installCommand ?? 'see README'}
+- Activity: ${activityContext}
+- README: ${repoData.readme.slice(0, 1500)}
 
-Generate content for EXACTLY these 5 scenes in this EXACT order:
+Generate content for EXACTLY these 5 scenes:
 
-scene1 "Hook" (4s) — One word or ultra-short phrase. Violent pattern interrupt. Stop the scroll.
-scene2 "Problem" (5s) — The pain, felt in the gut. Max 5 words headline. Brutal and specific.
-scene3 "Solution" (5s) — How ${repoData.repo} kills that problem. The aha moment. Max 4 words.
-scene4 "Features" (5s) — Exactly 4 killer features. 2-3 words each. No fluff.
-scene5 "Get Started" (3s) — One-line CTA. If install command exists, use it verbatim.
+scene1 "Hook" (4s)
+  headline: 1–3 words MAXIMUM. One concept. Stop the scroll. No verbs unless they punch hard.
+  Examples of good: "Zero config." / "Ship faster." / "The terminal, reimagined."
+  subtext: One sharp sentence — who this is for or what it replaces.
 
-Return ONLY a JSON array of 5 objects. Each object:
-{
-  "id": "scene1",                          // FIXED — do not change
-  "headline": "2-5 word bold display text",  // shown BIG on screen, max 6 words
-  "subtext": "One supporting sentence.",     // smaller text below headline
-  "bullets": ["feature 1","feature 2","feature 3","feature 4"],  // ONLY for scene4, else omit or []
-  "narrative": "Full spoken narration."      // 20-35 words
-}
+scene2 "Problem" (5s)
+  headline: 3–5 words. The specific pain this repo fixes. Name the enemy (slow builds, broken configs, manual work).
+  subtext: One sentence that makes the reader feel the frustration.
 
-Rules:
-- headline: SHORT and PUNCHY. Max 6 words. No punctuation except "—".
-- subtext: one clean sentence, no filler words
-- bullets (scene4 only): exactly 4 items, each 2-5 words, specific features not generic claims
-- narrative: energetic spoken words, present tense, active voice
+scene3 "Solution" (5s)
+  headline: 2–4 words. How ${repoData.repo} kills that pain. Active. Present tense.
+  subtext: One sentence that explains the mechanism, not just the benefit.
 
-Return ONLY the JSON array. No markdown fences, no extra text.`
+scene4 "Features" (5s)
+  bullets: Exactly 4 items. Each 2–4 words. Name what it DOES, not how great it is.
+  Bad: "Lightning fast performance" — Good: "Builds in 200ms"
+  Bad: "Easy to use" — Good: "Zero-config setup"
+  headline: 3–5 words that frame the list (e.g. "Built for speed" or "Four reasons to switch")
+  subtext: omit
+
+scene5 "Get Started" (3s)
+  headline: 3–5 words. Action-first. Urgency without hype.
+  subtext: The install command verbatim if one exists, otherwise the GitHub URL.
+  If install command: "${installCommand ?? ''}" — use it exactly.
+
+JSON format — return ONLY this array, no markdown:
+[
+  { "id": "scene1", "headline": "...", "subtext": "...", "bullets": [], "narrative": "..." },
+  { "id": "scene2", "headline": "...", "subtext": "...", "bullets": [], "narrative": "..." },
+  { "id": "scene3", "headline": "...", "subtext": "...", "bullets": [], "narrative": "..." },
+  { "id": "scene4", "headline": "...", "subtext": "", "bullets": ["...","...","...","..."], "narrative": "..." },
+  { "id": "scene5", "headline": "...", "subtext": "...", "bullets": [], "narrative": "..." }
+]
+
+narrative: 20–30 words, spoken aloud, energetic present tense. No filler phrases like "introducing" or "check out".
+Return ONLY the JSON array.`
 
   try {
     const { text } = await generateText({
       model: 'openai/gpt-4o-mini',
       prompt,
       temperature: 0.65,
-      maxOutputTokens: 900,
+      maxOutputTokens: 1200,
     })
 
     const parsed: Partial<ScriptScene>[] = JSON.parse(text.trim())

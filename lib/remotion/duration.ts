@@ -1,9 +1,9 @@
 import type { ScriptScene } from '../scriptGenerator'
 
 // Keep in sync with TRANSITION_FRAMES in VideoComposition.tsx
-const LAUNCH_TRANSITION_FRAMES = 2
+const LAUNCH_TRANSITION_FRAMES = 6
 // Keep in sync with KINETIC_TRANSITION_FRAMES in KineticComposition.tsx
-const KINETIC_TRANSITION_FRAMES = 2
+const KINETIC_TRANSITION_FRAMES = 6
 
 export function calcDurationInFrames(scenes: ScriptScene[], fps: number): number {
   const totalSceneFrames = scenes.reduce((s, sc) => s + sc.duration * fps, 0)
