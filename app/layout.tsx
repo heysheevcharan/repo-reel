@@ -7,8 +7,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'RepoReel - AI Video Generator for GitHub',
+  description: 'Turn your GitHub repo into a short-form video that explains what it does, who it\'s for, and what makes it unique.',
   generator: 'v0.app',
   icons: {
     icon: [
