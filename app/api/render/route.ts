@@ -1,9 +1,17 @@
 import { renderVideo, warmBundle } from '@/lib/videoRenderer'
 
-// Warm the Remotion bundle cache as soon as this route module loads
+// Warm the bundle cache on first load (no-op when Chrome isn't available)
 warmBundle()
 
 export async function POST(request: Request) {
+  // Vercel serverless has no Chrome binary — rendering must be self-hosted
+  if (process.env.VERCEL) {
+    return Response.json(
+      { error: 'Video rendering requires a self-hosted server. Deploy locally or on a VPS to use this feature.' },
+      { status: 501 }
+    )
+  }
+
   try {
     const { scenes, repoName, repoUrl } = await request.json()
 

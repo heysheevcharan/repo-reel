@@ -17,6 +17,8 @@ let cachedBundleUrl: string | null = null
 let bundleInProgress: Promise<string> | null = null
 
 export function warmBundle(): void {
+  // Skip warm-up on Vercel or when Chrome is unavailable
+  if (process.env.VERCEL) return
   getBundleUrl().catch(() => {})
 }
 
