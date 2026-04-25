@@ -33,8 +33,10 @@ export default function Home() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to analyze repository')
+        const text = await response.text()
+        let message = 'Failed to analyze repository'
+        try { message = JSON.parse(text).error ?? message } catch {}
+        throw new Error(message)
       }
 
       const data = await response.json()
@@ -65,8 +67,10 @@ export default function Home() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to render video')
+        const text = await response.text()
+        let message = 'Failed to render video'
+        try { message = JSON.parse(text).error ?? message } catch {}
+        throw new Error(message)
       }
 
       const data = await response.json()

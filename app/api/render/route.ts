@@ -19,7 +19,15 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Scenes required' }, { status: 400 })
     }
 
-    const result = await renderVideo(scenes, repoName, repoUrl)
+    // Back-fill headline for scenes analyzed before the field was added
+    const normalizedScenes = scenes.map((s: any) => ({
+      ...s,
+      headline: s.headline || s.narrative?.split(' ').slice(0, 5).join(' ') || s.title,
+      subtext: s.subtext ?? '',
+      bullets: s.bullets ?? [],
+    }))
+
+    const result = await renderVideo(normalizedScenes, repoName, repoUrl)
 
     return Response.json({
       success: true,
