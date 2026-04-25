@@ -6,10 +6,11 @@ import { ScriptScene } from '../scriptGenerator'
 const FPS = 30
 
 const DEFAULT_SCENES: ScriptScene[] = [
-  { id: 'scene1', title: 'Hook', duration: 10, narrative: 'Sample hook narrative.', visuals: '' },
-  { id: 'scene2', title: 'Problem', duration: 15, narrative: 'Sample problem narrative.', visuals: '' },
-  { id: 'scene3', title: 'Features', duration: 18, narrative: 'Sample features narrative.', visuals: '' },
-  { id: 'scene4', title: 'CTA', duration: 15, narrative: 'Sample call to action.', visuals: '' },
+  { id: 'scene1', title: 'Hook',        duration: 5, narrative: 'Sample hook narrative.', visuals: '' },
+  { id: 'scene2', title: 'Problem',     duration: 7, narrative: 'Sample problem narrative.', visuals: '' },
+  { id: 'scene3', title: 'Solution',    duration: 7, narrative: 'Sample solution narrative.', visuals: '' },
+  { id: 'scene4', title: 'Features',    duration: 6, narrative: 'Sample features narrative.', visuals: '' },
+  { id: 'scene5', title: 'Get Started', duration: 5, narrative: 'Sample call to action.', visuals: '' },
 ]
 
 export function calcDurationInFrames(scenes: ScriptScene[], fps: number): number {

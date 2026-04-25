@@ -9,84 +9,96 @@ export interface ScriptScene {
   visuals: string
 }
 
+// Fixed scene structure — titles, order, and durations are never changed by AI
+const SCENE_TEMPLATES: Omit<ScriptScene, 'narrative' | 'visuals'>[] = [
+  { id: 'scene1', title: 'Hook',       duration: 5 },
+  { id: 'scene2', title: 'Problem',    duration: 7 },
+  { id: 'scene3', title: 'Solution',   duration: 7 },
+  { id: 'scene4', title: 'Features',   duration: 6 },
+  { id: 'scene5', title: 'Get Started', duration: 5 },
+]
+
+export const TOTAL_DURATION_SECONDS = SCENE_TEMPLATES.reduce((s, sc) => s + sc.duration, 0) // 30s
+
 export async function generateVideoScript(
   repoData: GitHubRepoData
 ): Promise<ScriptScene[]> {
-  const prompt = `You are a creative video scriptwriter for a 58-second short-form video explaining GitHub repositories. 
-  
-The video has exactly 4 scenes, each with specific durations:
-- Scene 1 (Hook): 10 seconds - Grab attention, what is this project
-- Scene 2 (Problem): 15 seconds - What problem does it solve
-- Scene 3 (Features): 18 seconds - Key features and why it's great
-- Scene 4 (Call to Action): 15 seconds - Stars on GitHub, language, how to get started
+  const prompt = `You are writing narration for a 30-second GitHub repo video.
 
-Repository Information:
+The video has EXACTLY 5 scenes in this FIXED order. Do NOT change the scene IDs, titles, or order:
+
+1. scene1 "Hook" (5s) — One punchy sentence that grabs attention. Name the project and its core value.
+2. scene2 "Problem" (7s) — Describe the pain point developers face WITHOUT this tool. Be specific and relatable.
+3. scene3 "Solution" (7s) — Explain how ${repoData.repo} solves that problem. What does it actually do?
+4. scene4 "Features" (6s) — 2-3 standout features. Be concrete, not generic.
+5. scene5 "Get Started" (5s) — How to install/use it. Mention stars (${repoData.stars}) and language (${repoData.language}).
+
+Repository context:
 - Name: ${repoData.repo}
-- Owner: ${repoData.owner}
-- Description: ${repoData.description}
-- Stars: ${repoData.stars}
+- Description: ${repoData.description || 'No description'}
 - Language: ${repoData.language}
+- Stars: ${repoData.stars}
 - Topics: ${repoData.topics.join(', ')}
-- README Preview: ${repoData.readme.slice(0, 1000)}
-${repoData.packageJson.description ? `- Package.json description: ${repoData.packageJson.description}` : ''}
+- README: ${repoData.readme.slice(0, 800)}
+${repoData.packageJson.description ? `- Package description: ${repoData.packageJson.description}` : ''}
 
-Generate a JSON response with exactly 4 scenes. Each scene must have:
-- id: "scene1", "scene2", "scene3", or "scene4"
-- title: Scene title
-- duration: Duration in seconds (10, 15, 18, 15 respectively)
-- narrative: The exact script/dialogue to speak (50-100 words per scene)
-- visuals: A short description of what visuals should be shown
+Return ONLY a JSON array of exactly 5 objects. Each object must have:
+- id: exactly "scene1" through "scene5" (do NOT change these)
+- narrative: spoken narration for that scene (20-40 words, punchy and direct)
+- visuals: one short sentence describing what to show on screen
 
-Make the script engaging, punchy, and suitable for TikTok/YouTube shorts. Focus on why developers should care about this project.
+Example format:
+[
+  {"id":"scene1","narrative":"...","visuals":"..."},
+  {"id":"scene2","narrative":"...","visuals":"..."},
+  {"id":"scene3","narrative":"...","visuals":"..."},
+  {"id":"scene4","narrative":"...","visuals":"..."},
+  {"id":"scene5","narrative":"...","visuals":"..."}
+]
 
-Return ONLY valid JSON, no markdown, no extra text.`
+Return ONLY the JSON array. No markdown, no extra text.`
 
   try {
     const { text } = await generateText({
       model: 'openai/gpt-4o-mini',
       prompt,
-      temperature: 0.7,
-      maxOutputTokens: 1000,
+      temperature: 0.6,
+      maxOutputTokens: 800,
     })
 
-    const parsed = JSON.parse(text)
-    return parsed.scenes || parsed
+    const parsed: { id: string; narrative: string; visuals: string }[] =
+      JSON.parse(text.trim())
+
+    // Merge AI narratives into hardcoded scene templates — structure is always enforced
+    return SCENE_TEMPLATES.map((template) => {
+      const aiScene = parsed.find((s) => s.id === template.id)
+      return {
+        ...template,
+        narrative: aiScene?.narrative || fallbackNarrative(template.id, repoData),
+        visuals: aiScene?.visuals || '',
+      }
+    })
   } catch (error) {
-    console.error('[v0] Script generation error:', error)
-    // Fallback script if AI fails
+    console.error('[scriptGenerator] error:', error)
     return generateFallbackScript(repoData)
   }
 }
 
+function fallbackNarrative(id: string, repoData: GitHubRepoData): string {
+  switch (id) {
+    case 'scene1': return `Meet ${repoData.repo} — the ${repoData.language} project with ${repoData.stars} stars that every developer needs.`
+    case 'scene2': return `Developers waste hours on repetitive setup and boilerplate. There has to be a better way.`
+    case 'scene3': return `${repoData.repo} ${repoData.description || 'streamlines your entire workflow so you can focus on what matters.'}`
+    case 'scene4': return `Fast, well-documented, and actively maintained. It handles the hard parts so you don't have to.`
+    case 'scene5': return `Star it on GitHub, run the install command, and start building in minutes. Join ${repoData.stars} developers already using it.`
+    default: return ''
+  }
+}
+
 function generateFallbackScript(repoData: GitHubRepoData): ScriptScene[] {
-  return [
-    {
-      id: 'scene1',
-      title: 'Hook',
-      duration: 10,
-      narrative: `Meet ${repoData.repo} – the ${repoData.language} project that's changing how developers build. With ${repoData.stars} stars on GitHub, it's exactly what you've been looking for.`,
-      visuals: 'Animated title with repo name and language badge',
-    },
-    {
-      id: 'scene2',
-      title: 'Problem',
-      duration: 15,
-      narrative: `${repoData.description || `Building with traditional approaches is slow and repetitive. ${repoData.repo} solves this by streamlining the entire workflow.`} Developers waste time on boilerplate. Not anymore.`,
-      visuals: 'Show problem visualization: frustrated developer, slow workflow',
-    },
-    {
-      id: 'scene3',
-      title: 'Features',
-      duration: 18,
-      narrative: `Here's what makes it special: lightning-fast performance, beautiful developer experience, and a thriving community. Whether you're a beginner or expert, it just works. The codebase is clean, well-documented, and actively maintained by passionate developers.`,
-      visuals: 'Feature cards appearing: performance, DX, community, documentation',
-    },
-    {
-      id: 'scene4',
-      title: 'CTA',
-      duration: 15,
-      narrative: `Check out ${repoData.repo} today. ${repoData.stars} developers are already building amazing things. Star it on GitHub, read the docs, and join the community. Your next project starts here.`,
-      visuals: 'GitHub repo page, star button animation, GitHub link',
-    },
-  ]
+  return SCENE_TEMPLATES.map((template) => ({
+    ...template,
+    narrative: fallbackNarrative(template.id, repoData),
+    visuals: '',
+  }))
 }
