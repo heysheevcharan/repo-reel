@@ -71,12 +71,6 @@ export function VideoOutput({ repoName, repoUrl, scenes, template, theme, onEdit
         </Button>
       </div>
 
-      <div className="mt-12 text-center text-xs text-white/40">
-        <p className="mb-2">Built at Zero to Agent · Bengaluru · April 2026</p>
-        <a href="#" className="text-indigo-400 hover:text-indigo-300 transition-colors">
-          reproreel.vercel.app
-        </a>
-      </div>
     </div>
   )
 }

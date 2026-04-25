@@ -31,11 +31,7 @@ export function LandingScreen({ onSubmit }: LandingScreenProps) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4">
       {/* Badge */}
-      <div className="mb-12">
-        <div className="inline-block px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/60">
-          Zero to Agent · Vercel Hackathon 2026
-        </div>
-      </div>
+      {/* Logo or Title would go here */}
 
       {/* Headline */}
       <h1 className="text-5xl sm:text-6xl font-bold text-white text-center mb-6 leading-tight tracking-tight max-w-3xl">
