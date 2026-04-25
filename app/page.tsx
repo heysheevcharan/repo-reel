@@ -6,14 +6,18 @@ import { LandingScreen } from '@/components/LandingScreen'
 import { ProgressScreen } from '@/components/ProgressScreen'
 import { ScriptEditor } from '@/components/ScriptEditor'
 import { VideoOutput } from '@/components/VideoOutput'
+import type { ProjectTheme } from '@/lib/types'
 
 export default function Home() {
   const [screen, setScreen] = useState<ScreenState>('landing')
   const [repoUrl, setRepoUrl] = useState('')
   const [repoData, setRepoData] = useState<RepoData | null>(null)
-  const [videoUrl, setVideoUrl] = useState<string>('')
   const [error, setError] = useState<string>('')
-  const [isRendering, setIsRendering] = useState(false)
+
+  // Output state — set when user clicks render in the editor
+  const [outputScenes, setOutputScenes] = useState<ScriptScene[]>([])
+  const [outputTemplate, setOutputTemplate] = useState<'launch' | 'kinetic'>('launch')
+  const [outputTheme, setOutputTheme] = useState<ProjectTheme | undefined>()
 
   const extractRepoName = (url: string): string => {
     const parts = url.replace('https://github.com/', '').split('/')
@@ -52,38 +56,11 @@ export default function Home() {
     setScreen('editor')
   }
 
-  const handleRender = async (scenes: ScriptScene[], template: 'launch' | 'kinetic' = 'launch') => {
-    try {
-      setError('')
-      setIsRendering(true)
-      const response = await fetch('/api/render', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scenes,
-          repoName: repoData?.repoName,
-          repoUrl,
-          template,
-          theme: repoData?.theme,
-        }),
-      })
-
-      if (!response.ok) {
-        const text = await response.text()
-        let message = 'Failed to render video'
-        try { message = JSON.parse(text).error ?? message } catch {}
-        throw new Error(message)
-      }
-
-      const data = await response.json()
-      setVideoUrl(data.videoUrl)
-      setScreen('output')
-    } catch (err: any) {
-      console.error('[v0] Render error:', err)
-      setError(err.message)
-    } finally {
-      setIsRendering(false)
-    }
+  const handleRender = (scenes: ScriptScene[], template: 'launch' | 'kinetic' = 'launch') => {
+    setOutputScenes(scenes)
+    setOutputTemplate(template)
+    setOutputTheme(repoData?.theme)
+    setScreen('output')
   }
 
   const handleEditBack = () => {
@@ -124,16 +101,18 @@ export default function Home() {
           data={repoData}
           onBack={handleEditorBack}
           onRender={handleRender}
-          isRendering={isRendering}
+          isRendering={false}
         />
       )}
 
-      {screen === 'output' && (
+      {screen === 'output' && repoData && (
         <VideoOutput
           repoName={extractRepoName(repoUrl)}
-          duration={repoData?.totalDurationSeconds || 58}
+          repoUrl={repoUrl}
+          scenes={outputScenes}
+          template={outputTemplate}
+          theme={outputTheme}
           onEdit={handleEditBack}
-          videoUrl={videoUrl}
         />
       )}
     </div>

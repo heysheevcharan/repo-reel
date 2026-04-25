@@ -1,19 +1,37 @@
 'use client'
 
+import { Player } from '@remotion/player'
 import { Button } from '@/components/ui/button'
-import { Check, Download } from 'lucide-react'
+import { Check } from 'lucide-react'
+import { RepoReelVideo } from '@/lib/remotion/VideoComposition'
+import { KineticVideo } from '@/lib/remotion/KineticComposition'
+import { calcDurationInFrames, calcKineticDurationInFrames } from '@/lib/remotion/duration'
+import type { ScriptScene } from '@/lib/scriptGenerator'
+import type { ProjectTheme } from '@/lib/types'
+
+const FPS = 30
 
 interface VideoOutputProps {
   repoName: string
-  duration: number
+  repoUrl: string
+  scenes: ScriptScene[]
+  template: 'launch' | 'kinetic'
+  theme?: ProjectTheme
   onEdit: () => void
-  videoUrl?: string
 }
 
-export function VideoOutput({ repoName, duration, onEdit, videoUrl }: VideoOutputProps) {
+export function VideoOutput({ repoName, repoUrl, scenes, template, theme, onEdit }: VideoOutputProps) {
+  const isKinetic = template === 'kinetic'
+  const component = isKinetic ? KineticVideo : RepoReelVideo
+  const durationInFrames = isKinetic
+    ? calcKineticDurationInFrames(scenes, FPS)
+    : calcDurationInFrames(scenes, FPS)
+
+  const inputProps = { scenes, repoName, repoUrl, theme }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 bg-gradient-to-b from-background to-background">
-      <div className="mb-12 text-center">
+      <div className="mb-8 text-center">
         <div className="flex justify-center mb-4">
           <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center">
             <Check size={24} className="text-white" />
@@ -21,51 +39,29 @@ export function VideoOutput({ repoName, duration, onEdit, videoUrl }: VideoOutpu
         </div>
         <h1 className="text-2xl font-bold text-white mb-2">Your reel is ready.</h1>
         <p className="text-sm text-white/50 font-mono">
-          {repoName} · {duration} seconds · 1920×1080
+          {repoName} · {Math.round(durationInFrames / FPS)}s · live preview
         </p>
       </div>
 
-      <div className="mb-8 w-full max-w-3xl">
+      <div className="mb-8 w-full max-w-4xl">
         <div className="rounded-xl overflow-hidden border border-white/10 bg-black" style={{ aspectRatio: '16/9' }}>
-          {videoUrl ? (
-            <video
-              src={videoUrl}
-              controls
-              autoPlay
-              loop
-              playsInline
-              className="w-full h-full object-contain"
-            />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a0a0c]">
-              <div className="font-mono text-indigo-400 mb-2">{repoName}</div>
-              <div className="text-xs text-white/40">No video available</div>
-            </div>
-          )}
+          <Player
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            component={component as any}
+            inputProps={inputProps}
+            durationInFrames={durationInFrames}
+            fps={FPS}
+            compositionWidth={1920}
+            compositionHeight={1080}
+            style={{ width: '100%', height: '100%', display: 'block' }}
+            controls
+            autoPlay
+            loop
+          />
         </div>
       </div>
 
-      <div className="flex gap-4 mb-12 max-w-3xl w-full">
-        {videoUrl ? (
-          <a href={videoUrl} download className="flex-1">
-            <Button
-              variant="outline"
-              className="w-full border-white/20 text-white/70 hover:text-white hover:bg-white/5 gap-2"
-            >
-              <Download size={16} />
-              Download MP4
-            </Button>
-          </a>
-        ) : (
-          <Button
-            variant="outline"
-            disabled
-            className="flex-1 border-white/20 text-white/70 gap-2"
-          >
-            <Download size={16} />
-            Download MP4
-          </Button>
-        )}
+      <div className="flex gap-4 max-w-4xl w-full">
         <Button
           onClick={onEdit}
           variant="outline"
@@ -75,7 +71,7 @@ export function VideoOutput({ repoName, duration, onEdit, videoUrl }: VideoOutpu
         </Button>
       </div>
 
-      <div className="text-center text-xs text-white/40">
+      <div className="mt-12 text-center text-xs text-white/40">
         <p className="mb-2">Built at Zero to Agent · Bengaluru · April 2026</p>
         <a href="#" className="text-indigo-400 hover:text-indigo-300 transition-colors">
           reproreel.vercel.app

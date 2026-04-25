@@ -118,7 +118,7 @@ export function ScriptEditor({
                   Rendering…
                 </span>
               ) : (
-                'Render Video →'
+                'Preview Animation →'
               )}
             </Button>
           </div>
