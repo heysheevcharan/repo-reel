@@ -478,7 +478,10 @@ function KineticSceneRouter({ scene, repoName, repoUrl, index, theme }: {
 
 // ─── KineticVideo ─────────────────────────────────────────────────────────────
 
-export const KineticVideo: React.FC<KineticVideoProps> = ({ scenes, repoName, repoUrl, theme, audioConfig }) => {
+export const KineticVideo: React.FC<KineticVideoProps> = (props) => {
+  // Guard: Remotion Player may call the component with null props during initial mount
+  if (!props || !props.scenes) return null
+  const { scenes, repoName, repoUrl, theme, audioConfig } = props
   const { fps } = useVideoConfig()
 
   // Resolve music track URL

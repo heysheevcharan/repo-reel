@@ -48,3 +48,11 @@ export interface RepoData {
 }
 
 export type ScreenState = 'landing' | 'progress' | 'editor' | 'output'
+
+/**
+ * Template identifiers are arbitrary strings that map to entries in
+ * `TEMPLATE_REGISTRY` (lib/remotion/registry.ts). The built-in values are
+ * 'launch' and 'kinetic', but new templates can be added to the registry
+ * without changing this type.
+ */
+export type TemplateId = string

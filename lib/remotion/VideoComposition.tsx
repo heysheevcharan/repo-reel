@@ -669,7 +669,10 @@ function SceneRouter({ scene, repoName, repoUrl, theme }: {
 
 // ─── Root composition ─────────────────────────────────────────────────────────
 
-export const RepoReelVideo: React.FC<VideoProps> = ({ scenes, repoName, repoUrl, theme, audioConfig }) => {
+export const RepoReelVideo: React.FC<VideoProps> = (props) => {
+  // Guard: Remotion Player may call the component with null props during initial mount
+  if (!props || !props.scenes) return null
+  const { scenes, repoName, repoUrl, theme, audioConfig } = props
   const { fps } = useVideoConfig()
 
   // Resolve music track URL

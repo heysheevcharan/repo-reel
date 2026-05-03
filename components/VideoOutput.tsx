@@ -1,12 +1,10 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Player } from '@remotion/player'
-import { RepoReelVideo } from '@/lib/remotion/VideoComposition'
-import { KineticVideo } from '@/lib/remotion/KineticComposition'
-import { calcDurationInFrames, calcKineticDurationInFrames } from '@/lib/remotion/duration'
+import { getTemplateOrDefault } from '@/lib/remotion/registry'
 import type { ScriptScene } from '@/lib/scriptGenerator'
-import type { ProjectTheme, AudioConfig } from '@/lib/types'
+import type { ProjectTheme, AudioConfig, TemplateId } from '@/lib/types'
 import { VideoModal, type VideoEntry } from './VideoModal'
 
 const FPS = 30
@@ -15,7 +13,7 @@ interface VideoOutputProps {
   repoName: string
   repoUrl: string
   scenes: ScriptScene[]
-  template: 'launch' | 'kinetic'
+  template: TemplateId
   theme?: ProjectTheme
   audioConfig?: AudioConfig
   onEdit: () => void
@@ -130,12 +128,15 @@ function VideoCard({
   onClick: () => void
 }) {
   const [isHovered, setIsHovered] = useState(false)
+  const [component, setComponent] = useState<React.ComponentType<any> | null>(null)
 
-  const isKinetic = video.template === 'kinetic'
-  const component = isKinetic ? KineticVideo : RepoReelVideo
-  const durationInFrames = isKinetic
-    ? calcKineticDurationInFrames(video.scenes, FPS)
-    : calcDurationInFrames(video.scenes, FPS)
+  const tplDef = getTemplateOrDefault(video.template)
+  const durationInFrames = tplDef.calculateDuration(video.scenes, FPS)
+
+  useEffect(() => {
+    tplDef.loadComponent().then((comp) => setComponent(() => comp))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [video.template])
 
   const inputProps = {
     scenes: video.scenes,
@@ -166,18 +167,24 @@ function VideoCard({
     >
       {/* Video thumbnail */}
       <div className="relative bg-black" style={{ aspectRatio: '16/9' }}>
-        <Player
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          component={component as any}
-          inputProps={inputProps}
-          durationInFrames={durationInFrames}
-          fps={FPS}
-          compositionWidth={1920}
-          compositionHeight={1080}
-          style={{ width: '100%', height: '100%', display: 'block' }}
-          // No controls, no autoplay — static thumbnail
-          numberOfSharedAudioTags={0}
-        />
+        {component ? (
+          <Player
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            component={component as any}
+            inputProps={inputProps}
+            durationInFrames={durationInFrames}
+            fps={FPS}
+            compositionWidth={1920}
+            compositionHeight={1080}
+            style={{ width: '100%', height: '100%', display: 'block' }}
+            // No controls, no autoplay — static thumbnail
+            numberOfSharedAudioTags={0}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-black/50">
+            <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-indigo-400 animate-spin" />
+          </div>
+        )}
 
         {/* Hover overlay */}
         <div

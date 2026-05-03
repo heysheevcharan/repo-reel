@@ -4,7 +4,7 @@ import { bundle } from '@remotion/bundler'
 import { renderMedia, selectComposition } from '@remotion/renderer'
 import { ScriptScene } from './scriptGenerator'
 import { ProjectTheme, AudioConfig } from './types'
-import { calcDurationInFrames, calcKineticDurationInFrames } from './remotion/duration'
+import { getTemplateOrDefault } from './remotion/registry'
 
 export interface RenderResult {
   videoUrl: string
@@ -41,7 +41,7 @@ export async function renderVideo(
   scenes: ScriptScene[],
   repoName: string,
   repoUrl: string,
-  template: 'launch' | 'kinetic' = 'launch',
+  templateId: string = 'launch',
   theme?: ProjectTheme,
   audioConfig?: AudioConfig
 ): Promise<RenderResult> {
@@ -53,10 +53,10 @@ export async function renderVideo(
   const fps = 30
   const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0)
 
-  const compositionId = template === 'kinetic' ? 'KineticVideo' : 'RepoReelVideo'
-  const durationInFrames = template === 'kinetic'
-    ? calcKineticDurationInFrames(scenes, fps)
-    : calcDurationInFrames(scenes, fps)
+  // Lookup the template from registry — falls back to 'launch' if unknown id
+  const template = getTemplateOrDefault(templateId)
+  const durationInFrames = template.calculateDuration(scenes, fps)
+  const compositionId = template.id
 
   const inputProps = { scenes, repoName, repoUrl, theme, audioConfig }
 
