@@ -3,8 +3,9 @@ import fs from 'fs'
 import { bundle } from '@remotion/bundler'
 import { renderMedia, selectComposition } from '@remotion/renderer'
 import { ScriptScene } from './scriptGenerator'
-import { ProjectTheme, AudioConfig } from './types'
+import { ProjectTheme, AudioConfig, SceneDirective } from './types'
 import { getTemplateOrDefault } from './remotion/registry'
+import { calcMultiTemplateDurationInFrames } from './remotion/MultiTemplateComposition'
 
 export interface RenderResult {
   videoUrl: string
@@ -37,25 +38,56 @@ async function getBundleUrl(): Promise<string> {
   return bundleInProgress
 }
 
+const FPS = 30
+
 export async function renderVideo(
   scenes: ScriptScene[],
   repoName: string,
   repoUrl: string,
   templateId: string = 'launch',
   theme?: ProjectTheme,
-  audioConfig?: AudioConfig
+  audioConfig?: AudioConfig,
+  sceneDirectives?: SceneDirective[]
 ): Promise<RenderResult> {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true })
 
   const outputFile = path.join(OUTPUT_DIR, `${repoName.replace(/[^a-z0-9]/gi, '-')}-${Date.now()}.mp4`)
   const bundled = await getBundleUrl()
 
-  const fps = 30
-  const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0)
+  // ─── Multi-template pipeline ────────────────────────────────────────────────
+  if (templateId === 'multiTemplate' && sceneDirectives?.length) {
+    const durationInFrames = calcMultiTemplateDurationInFrames(sceneDirectives, FPS)
+    const inputProps = { sceneDirectives, audioConfig }
 
-  // Lookup the template from registry — falls back to 'launch' if unknown id
+    const composition = await selectComposition({
+      serveUrl: bundled,
+      id: 'multiTemplate',
+      inputProps,
+    })
+
+    await renderMedia({
+      composition: {
+        ...composition,
+        durationInFrames,
+        width: 1920,
+        height: 1080,
+        defaultProps: inputProps,
+      },
+      serveUrl: bundled,
+      codec: 'h264',
+      outputLocation: outputFile,
+      inputProps,
+      chromiumOptions: { disableWebSecurity: true },
+    })
+
+    const totalDuration = sceneDirectives.reduce((sum, s) => sum + s.durationSeconds, 0)
+    return { videoUrl: `/videos/${path.basename(outputFile)}`, duration: totalDuration, format: 'mp4' }
+  }
+
+  // ─── Legacy pipeline ────────────────────────────────────────────────────────
+  const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0)
   const template = getTemplateOrDefault(templateId)
-  const durationInFrames = template.calculateDuration(scenes, fps)
+  const durationInFrames = template.calculateDuration(scenes, FPS)
   const compositionId = template.id
 
   const inputProps = { scenes, repoName, repoUrl, theme, audioConfig }
@@ -81,10 +113,8 @@ export async function renderVideo(
     chromiumOptions: { disableWebSecurity: true },
   })
 
-  const videoUrl = `/videos/${path.basename(outputFile)}`
-
   return {
-    videoUrl,
+    videoUrl: `/videos/${path.basename(outputFile)}`,
     duration: totalDuration,
     format: 'mp4',
   }

@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { Player } from '@remotion/player'
 import { getTemplateOrDefault } from '@/lib/remotion/registry'
 import type { ScriptScene } from '@/lib/scriptGenerator'
-import type { ProjectTheme, AudioConfig, TemplateId } from '@/lib/types'
+import type { ProjectTheme, AudioConfig, TemplateId, SceneDirective } from '@/lib/types'
 import { VideoModal, type VideoEntry } from './VideoModal'
 
 const FPS = 30
@@ -13,13 +13,14 @@ interface VideoOutputProps {
   repoName: string
   repoUrl: string
   scenes: ScriptScene[]
+  sceneDirectives?: SceneDirective[]
   template: TemplateId
   theme?: ProjectTheme
   audioConfig?: AudioConfig
   onEdit: () => void
 }
 
-export function VideoOutput({ repoName, repoUrl, scenes, template, theme, audioConfig, onEdit }: VideoOutputProps) {
+export function VideoOutput({ repoName, repoUrl, scenes, sceneDirectives, template, theme, audioConfig, onEdit }: VideoOutputProps) {
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null)
 
   // Build a list of videos. For now we show the current video.
@@ -30,6 +31,7 @@ export function VideoOutput({ repoName, repoUrl, scenes, template, theme, audioC
       repoName,
       repoUrl,
       scenes,
+      sceneDirectives,
       template,
       theme,
       audioConfig: audioConfig ?? { musicTrackId: 'motivational-1', musicVolume: 0.3 },
@@ -131,7 +133,7 @@ function VideoCard({
   const [component, setComponent] = useState<React.ComponentType<any> | null>(null)
 
   const tplDef = getTemplateOrDefault(video.template)
-  const durationInFrames = tplDef.calculateDuration(video.scenes, FPS)
+  const durationInFrames = tplDef.calculateDuration(video.sceneDirectives?.length ? video.sceneDirectives : video.scenes, FPS)
 
   useEffect(() => {
     tplDef.loadComponent().then((comp) => setComponent(() => comp))
@@ -140,6 +142,7 @@ function VideoCard({
 
   const inputProps = {
     scenes: video.scenes,
+    sceneDirectives: video.sceneDirectives,
     repoName: video.repoName,
     repoUrl: video.repoUrl,
     theme: video.theme,

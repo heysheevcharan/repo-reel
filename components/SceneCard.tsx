@@ -5,12 +5,13 @@ import { ScriptScene } from '@/lib/types'
 
 interface SceneCardProps {
   scene: ScriptScene
+  assignedTemplateId?: string
   onTextChange: (text: string) => void
 }
 
 const MAX_CHARS = 200
 
-export function SceneCard({ scene, onTextChange }: SceneCardProps) {
+export function SceneCard({ scene, assignedTemplateId, onTextChange }: SceneCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [text, setText] = useState(scene.narrative)
 
@@ -34,8 +35,15 @@ export function SceneCard({ scene, onTextChange }: SceneCardProps) {
       {/* Frozen header */}
       <div className="px-4 py-3 border-b border-white/5">
         <div className="flex items-center justify-between">
-          <div className="text-xs font-mono text-white/50 uppercase tracking-wide">
-            {scene.title}
+          <div className="flex items-center gap-3">
+            <div className="text-xs font-mono text-white/50 uppercase tracking-wide">
+              {scene.title}
+            </div>
+            {assignedTemplateId && (
+              <div className="px-2 py-0.5 rounded-sm bg-indigo-500/20 text-indigo-300 text-[10px] font-mono border border-indigo-500/30">
+                {assignedTemplateId}
+              </div>
+            )}
           </div>
           <div className="text-xs font-mono text-white/40">
             {scene.duration}s

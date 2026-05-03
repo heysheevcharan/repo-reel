@@ -207,7 +207,7 @@ export async function extractProjectTheme(
   // Run everything in parallel
   const [githubMeta, websiteMeta, moodResult, avatarDataUrl, logoDataUrl] = await Promise.all([
     scrapeMetaTags(`https://github.com/${repoData.owner}/${repoData.repo}`),
-    homepage ? scrapeMetaTags(homepage) : Promise.resolve({}),
+    homepage ? scrapeMetaTags(homepage) : Promise.resolve<{ themeColor?: string; ogImage?: string }>({}),
     inferMoodAndTheme(repoData),
     toDataUrl(avatarRawUrl),
     extractLogoFromReadme(repoData.readme, repoData.owner, repoData.repo),

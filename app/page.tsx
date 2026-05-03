@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ScreenState, RepoData, ScriptScene, AudioConfig, TemplateId } from '@/lib/types'
+import { ScreenState, RepoData, ScriptScene, AudioConfig, TemplateId, SceneDirective } from '@/lib/types'
 import { LandingScreen } from '@/components/LandingScreen'
 import { ProgressScreen } from '@/components/ProgressScreen'
 import { ScriptEditor } from '@/components/ScriptEditor'
@@ -17,6 +17,7 @@ export default function Home() {
 
   // Output state — set when user clicks render in the editor
   const [outputScenes, setOutputScenes] = useState<ScriptScene[]>([])
+  const [outputDirectives, setOutputDirectives] = useState<SceneDirective[] | undefined>()
   const [outputTemplate, setOutputTemplate] = useState<TemplateId>('launch')
   const [outputTheme, setOutputTheme] = useState<ProjectTheme | undefined>()
   const [outputAudioConfig, setOutputAudioConfig] = useState<AudioConfig>(DEFAULT_AUDIO_CONFIG)
@@ -58,8 +59,9 @@ export default function Home() {
     setScreen('editor')
   }
 
-  const handleRender = (scenes: ScriptScene[], template: TemplateId = 'launch', audioConfig: AudioConfig = DEFAULT_AUDIO_CONFIG) => {
+  const handleRender = (scenes: ScriptScene[], template: TemplateId = 'launch', audioConfig: AudioConfig = DEFAULT_AUDIO_CONFIG, sceneDirectives?: SceneDirective[]) => {
     setOutputScenes(scenes)
+    setOutputDirectives(sceneDirectives)
     setOutputTemplate(template)
     setOutputTheme(repoData?.theme)
     setOutputAudioConfig(audioConfig)
@@ -113,6 +115,7 @@ export default function Home() {
           repoName={extractRepoName(repoUrl)}
           repoUrl={repoUrl}
           scenes={outputScenes}
+          sceneDirectives={outputDirectives}
           template={outputTemplate}
           theme={outputTheme}
           audioConfig={outputAudioConfig}

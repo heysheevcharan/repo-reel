@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Player } from '@remotion/player'
 import { Button } from '@/components/ui/button'
-import { RepoData, AudioConfig, TemplateId } from '@/lib/types'
+import { RepoData, AudioConfig, TemplateId, SceneDirective } from '@/lib/types'
 import { DEFAULT_AUDIO_CONFIG } from '@/lib/audioConfig'
 import { TEMPLATE_REGISTRY, getTemplateOrDefault, TemplateDefinition } from '@/lib/remotion/registry'
 import { SceneCard } from './SceneCard'
@@ -15,7 +15,7 @@ const FPS = 30
 interface ScriptEditorProps {
   data: RepoData
   onBack: () => void
-  onRender: (scenes: RepoData['scriptScenes'], template: TemplateId, audioConfig: AudioConfig) => void
+  onRender: (scenes: RepoData['scriptScenes'], template: TemplateId, audioConfig: AudioConfig, sceneDirectives?: SceneDirective[]) => void
   isRendering?: boolean
 }
 
@@ -58,7 +58,9 @@ function TemplateCard({
   onClick: () => void
 }) {
   const component = useTemplateComponent(tpl.id)
-  const durationInFrames = tpl.calculateDuration(inputProps.scenes, FPS)
+  const durationInFrames = tpl.id === 'multiTemplate' 
+    ? tpl.calculateDuration(inputProps.sceneDirectives, FPS)
+    : tpl.calculateDuration(inputProps.scenes, FPS)
 
   return (
     <button
@@ -77,8 +79,11 @@ function TemplateCard({
           <Player
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             component={component as any}
-            inputProps={{ ...inputProps, audioConfig: { musicTrackId: 'none', musicVolume: 0 } }}
-            durationInFrames={durationInFrames}
+            inputProps={{ 
+              ...inputProps, 
+              audioConfig: { musicTrackId: 'none', musicVolume: 0 } 
+            }}
+            durationInFrames={durationInFrames || 1}
             fps={FPS}
             compositionWidth={1920}
             compositionHeight={1080}
@@ -132,7 +137,9 @@ export function ScriptEditor({
   isRendering = false,
 }: ScriptEditorProps) {
   const [scenes, setScenes] = useState(data.scriptScenes)
-  const [templateId, setTemplateId] = useState<TemplateId>('launch')
+  const [templateId, setTemplateId] = useState<TemplateId>(
+    data.sceneDirectives?.length ? 'multiTemplate' : 'launch'
+  )
   const [audioConfig, setAudioConfig] = useState<AudioConfig>(DEFAULT_AUDIO_CONFIG)
   const [modalTemplateId, setModalTemplateId] = useState<TemplateId | null>(null)
 
@@ -145,7 +152,7 @@ export function ScriptEditor({
   }
 
   const handleRender = () => {
-    onRender(scenes, templateId, audioConfig)
+    onRender(scenes, templateId, audioConfig, data.sceneDirectives)
   }
 
   const handleCardClick = (id: TemplateId) => {
@@ -159,6 +166,7 @@ export function ScriptEditor({
 
   const inputProps = {
     scenes,
+    sceneDirectives: data.sceneDirectives,
     repoName: data.repoName,
     repoUrl: data.repoUrl,
     theme: data.theme,
@@ -172,6 +180,7 @@ export function ScriptEditor({
         repoName: data.repoName,
         repoUrl: data.repoUrl,
         scenes,
+        sceneDirectives: data.sceneDirectives,
         template: modalTemplateId,
         theme: data.theme,
         audioConfig,
@@ -204,10 +213,11 @@ export function ScriptEditor({
           </div>
 
           <div className="space-y-4 mb-8">
-            {scenes.map((scene) => (
+            {scenes.map((scene, i) => (
               <SceneCard
                 key={scene.id}
                 scene={scene}
+                assignedTemplateId={templateId === 'multiTemplate' ? data.sceneDirectives?.[i]?.templateId : undefined}
                 onTextChange={(text) => handleSceneTextChange(scene.id, text)}
               />
             ))}

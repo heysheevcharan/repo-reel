@@ -31,14 +31,27 @@ export const defaultFutureOfDesignProps: FutureOfDesignProps = {
   letterSpacing: -2,
 }
 
-export const Scene: React.FC<FutureOfDesignProps> = (props) => {
+export const Scene: React.FC<FutureOfDesignProps> = ({
+  smallText = defaultFutureOfDesignProps.smallText,
+  mainText = defaultFutureOfDesignProps.mainText,
+  subText = defaultFutureOfDesignProps.subText,
+  textColor = defaultFutureOfDesignProps.textColor,
+  glowColor = defaultFutureOfDesignProps.glowColor,
+  backgroundColor = defaultFutureOfDesignProps.backgroundColor,
+  scale = defaultFutureOfDesignProps.scale,
+  animationSpeed = defaultFutureOfDesignProps.animationSpeed,
+  blurAmount = defaultFutureOfDesignProps.blurAmount,
+  slideDistance = defaultFutureOfDesignProps.slideDistance,
+  glowIntensity = defaultFutureOfDesignProps.glowIntensity,
+  letterSpacing = defaultFutureOfDesignProps.letterSpacing,
+}) => {
   const frame = useCurrentFrame()
   const { fps, width, height } = useVideoConfig()
 
   const minDim = Math.min(width, height)
-  const speed = props.animationSpeed
+  const speed = animationSpeed
   const adjustedFrame = frame * speed
-  const scaleValue = props.scale
+  const scaleValue = scale
 
   // Main text — blur + slide from left
   const mainProgress = spring({
@@ -47,8 +60,8 @@ export const Scene: React.FC<FutureOfDesignProps> = (props) => {
     config: { damping: 22, stiffness: 70 },
   })
 
-  const mainX = interpolate(mainProgress, [0, 1], [-props.slideDistance, 0])
-  const mainBlur = interpolate(mainProgress, [0, 0.6, 1], [props.blurAmount, 5, 0])
+  const mainX = interpolate(mainProgress, [0, 1], [-slideDistance, 0])
+  const mainBlur = interpolate(mainProgress, [0, 0.6, 1], [blurAmount, 5, 0])
   const mainOpacity = interpolate(mainProgress, [0, 0.3, 1], [0, 0.8, 1])
 
   // Secondary text — delayed fade/slide
@@ -65,7 +78,7 @@ export const Scene: React.FC<FutureOfDesignProps> = (props) => {
     <AbsoluteFill style={{
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: props.backgroundColor,
+      backgroundColor: backgroundColor,
     }}>
       <div style={{
         transform: `scale(${scaleValue})`,
@@ -79,7 +92,7 @@ export const Scene: React.FC<FutureOfDesignProps> = (props) => {
           {/* Small text — floats above */}
           <div style={{
             position: 'absolute',
-            color: props.textColor,
+            color: textColor,
             fontSize: minDim * 0.055,
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontWeight: 400,
@@ -90,30 +103,30 @@ export const Scene: React.FC<FutureOfDesignProps> = (props) => {
             left: '50%',
             marginLeft: minDim * -0.11,
           }}>
-            {props.smallText}
+            {smallText}
           </div>
 
           {/* Main text — italic serif, blur + slide */}
           <h1 style={{
-            color: props.textColor,
+            color: textColor,
             fontSize: minDim * 0.18,
             fontFamily: 'Georgia, serif',
             fontWeight: 400,
             fontStyle: 'italic',
             margin: 0,
-            letterSpacing: `${props.letterSpacing}px`,
+            letterSpacing: `${letterSpacing}px`,
             opacity: mainOpacity,
             transform: `translateX(${mainX}px)`,
-            filter: `blur(${mainBlur}px) drop-shadow(0 0 ${props.glowIntensity}px ${props.glowColor})`,
-            textShadow: `0 0 ${props.glowIntensity * 0.5}px ${props.glowColor}`,
+            filter: `blur(${mainBlur}px) drop-shadow(0 0 ${glowIntensity}px ${glowColor})`,
+            textShadow: `0 0 ${glowIntensity * 0.5}px ${glowColor}`,
             textAlign: 'center',
           }}>
-            {props.mainText}
+            {mainText}
           </h1>
 
           {/* Sub text — slides up from below */}
           <div style={{
-            color: props.textColor,
+            color: textColor,
             fontSize: minDim * 0.042,
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontWeight: 600,
@@ -123,7 +136,7 @@ export const Scene: React.FC<FutureOfDesignProps> = (props) => {
             letterSpacing: minDim * 0.008,
             textAlign: 'center',
           }}>
-            {props.subText}
+            {subText}
           </div>
 
         </div>

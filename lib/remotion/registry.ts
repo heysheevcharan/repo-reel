@@ -1,30 +1,43 @@
 import React from 'react'
 import type { ScriptScene } from '../scriptGenerator'
+import type { SceneDirective } from '../types'
 import type { VideoProps } from './VideoComposition'
 import { calcDurationInFrames, calcKineticDurationInFrames } from './duration'
+import { calcMultiTemplateDurationInFrames } from './MultiTemplateComposition'
 
 // ─── Template Definition ──────────────────────────────────────────────────────
-//
-// Every template must:
-//  1. Accept the standard VideoProps (scenes, repoName, repoUrl, theme?, audioConfig?)
-//  2. Provide a function to calculate its total duration in frames from scenes + fps
-//
-// This contract means any template can be dropped into the Player or server renderer
-// without any call-site changes.
 
 export interface TemplateDefinition {
   id: string
   label: string
   desc: string
-  category: 'narrative' | 'kinetic' | 'editorial' | 'cinematic'
+  category: 'narrative' | 'kinetic' | 'editorial' | 'cinematic' | 'multi'
+  isMultiTemplate?: boolean  // true for the new multi-template pipeline
   /** Lazily import the composition component */
-  loadComponent: () => Promise<React.ComponentType<VideoProps>>
-  calculateDuration: (scenes: ScriptScene[], fps: number) => number
+  loadComponent: () => Promise<React.ComponentType<any>>
+  calculateDuration: (scenes: ScriptScene[] | SceneDirective[], fps: number) => number
 }
 
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
 export const TEMPLATE_REGISTRY: TemplateDefinition[] = [
+  {
+    id: 'multiTemplate',
+    label: 'AI Director',
+    desc: 'AI picks the best template for each scene — 5+ different animations stitched into one video',
+    category: 'multi',
+    isMultiTemplate: true,
+    loadComponent: () =>
+      import('./MultiTemplateComposition').then((m) => m.MultiTemplateVideo as React.ComponentType<any>),
+    calculateDuration: (scenes: ScriptScene[] | SceneDirective[], fps: number) => {
+      // If we have SceneDirectives use their durationSeconds, otherwise fallback
+      const directives = scenes as SceneDirective[]
+      if (directives[0] && 'durationSeconds' in directives[0]) {
+        return calcMultiTemplateDurationInFrames(directives, fps)
+      }
+      return calcDurationInFrames(scenes as ScriptScene[], fps)
+    },
+  },
   {
     id: 'launch',
     label: 'Launch Video',
@@ -32,7 +45,7 @@ export const TEMPLATE_REGISTRY: TemplateDefinition[] = [
     category: 'cinematic',
     loadComponent: () =>
       import('./VideoComposition').then((m) => m.RepoReelVideo as React.ComponentType<VideoProps>),
-    calculateDuration: calcDurationInFrames,
+    calculateDuration: (scenes, fps) => calcDurationInFrames(scenes as ScriptScene[], fps),
   },
   {
     id: 'kinetic',
@@ -41,7 +54,7 @@ export const TEMPLATE_REGISTRY: TemplateDefinition[] = [
     category: 'kinetic',
     loadComponent: () =>
       import('./KineticComposition').then((m) => m.KineticVideo as React.ComponentType<VideoProps>),
-    calculateDuration: calcKineticDurationInFrames,
+    calculateDuration: (scenes, fps) => calcKineticDurationInFrames(scenes as ScriptScene[], fps),
   },
   {
     id: 'futureOfDesign',
@@ -50,7 +63,7 @@ export const TEMPLATE_REGISTRY: TemplateDefinition[] = [
     category: 'editorial',
     loadComponent: () =>
       import('./adapters/FutureOfDesignAdapter').then((m) => m.FutureOfDesignAdapter as React.ComponentType<VideoProps>),
-    calculateDuration: calcDurationInFrames,
+    calculateDuration: (scenes, fps) => calcDurationInFrames(scenes as ScriptScene[], fps),
   },
   {
     id: 'editorialDesign',
@@ -59,7 +72,7 @@ export const TEMPLATE_REGISTRY: TemplateDefinition[] = [
     category: 'editorial',
     loadComponent: () =>
       import('./adapters/EditorialDesignAdapter').then((m) => m.EditorialDesignAdapter as React.ComponentType<VideoProps>),
-    calculateDuration: calcDurationInFrames,
+    calculateDuration: (scenes, fps) => calcDurationInFrames(scenes as ScriptScene[], fps),
   },
 ]
 

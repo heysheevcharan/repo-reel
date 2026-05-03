@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Player, type PlayerRef } from '@remotion/player'
 import { getTemplateOrDefault } from '@/lib/remotion/registry'
 import type { ScriptScene } from '@/lib/scriptGenerator'
-import type { ProjectTheme, AudioConfig, TemplateId } from '@/lib/types'
+import type { ProjectTheme, AudioConfig, TemplateId, SceneDirective } from '@/lib/types'
 import { MUSIC_TRACKS } from '@/lib/audioConfig'
 
 const FPS = 30
@@ -14,6 +14,7 @@ export interface VideoEntry {
   repoName: string
   repoUrl: string
   scenes: ScriptScene[]
+  sceneDirectives?: SceneDirective[]
   template: TemplateId
   theme?: ProjectTheme
   audioConfig: AudioConfig
@@ -35,7 +36,7 @@ export function VideoModal({ video, onClose, onAudioUpdate }: VideoModalProps) {
   const playerRef = useRef<PlayerRef>(null)
 
   const tplDef = getTemplateOrDefault(video.template)
-  const durationInFrames = tplDef.calculateDuration(video.scenes, FPS)
+  const durationInFrames = tplDef.calculateDuration(video.sceneDirectives?.length ? video.sceneDirectives : video.scenes, FPS)
   const [component, setComponent] = useState<React.ComponentType<any> | null>(null)
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export function VideoModal({ video, onClose, onAudioUpdate }: VideoModalProps) {
 
   const inputProps = {
     scenes: video.scenes,
+    sceneDirectives: video.sceneDirectives,
     repoName: video.repoName,
     repoUrl: video.repoUrl,
     theme: video.theme,

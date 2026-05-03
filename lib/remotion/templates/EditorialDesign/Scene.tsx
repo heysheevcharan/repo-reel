@@ -22,11 +22,19 @@ export const defaultEditorialDesignProps: EditorialDesignProps = {
   animationSpeed: 1,
 }
 
-export const Scene: React.FC<EditorialDesignProps> = (props) => {
+export const Scene: React.FC<EditorialDesignProps> = ({
+  smallText = defaultEditorialDesignProps.smallText,
+  mainText = defaultEditorialDesignProps.mainText,
+  subText = defaultEditorialDesignProps.subText,
+  textColor = defaultEditorialDesignProps.textColor,
+  backgroundColor = defaultEditorialDesignProps.backgroundColor,
+  scale = defaultEditorialDesignProps.scale,
+  animationSpeed = defaultEditorialDesignProps.animationSpeed,
+}) => {
   const frame = useCurrentFrame()
   const { fps, width, height } = useVideoConfig()
 
-  const speed = props.animationSpeed
+  const speed = animationSpeed
   const adjustedFrame = frame * speed
 
   // Background scale (Ken Burns)
@@ -47,13 +55,13 @@ export const Scene: React.FC<EditorialDesignProps> = (props) => {
 
   return (
     <AbsoluteFill style={{
-      backgroundColor: props.backgroundColor,
+      backgroundColor: backgroundColor,
       overflow: 'hidden',
     }}>
       {/* Background layer for Ken Burns */}
       <AbsoluteFill style={{
         transform: `scale(${bgScale})`,
-        backgroundColor: props.backgroundColor,
+        backgroundColor: backgroundColor,
       }} />
 
       <AbsoluteFill style={{
@@ -64,12 +72,12 @@ export const Scene: React.FC<EditorialDesignProps> = (props) => {
         flexDirection: 'column',
       }}>
         <div style={{
-          transform: `scale(${props.scale})`,
+          transform: `scale(${scale})`,
           transformOrigin: 'left center',
         }}>
           {/* Small text above */}
           <div style={{
-            color: props.textColor,
+            color: textColor,
             fontSize: minDim * 0.04,
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontWeight: 600,
@@ -77,12 +85,12 @@ export const Scene: React.FC<EditorialDesignProps> = (props) => {
             opacity: secondaryOpacity,
             marginBottom: minDim * 0.02,
           }}>
-            {props.smallText}
+            {smallText}
           </div>
 
           {/* Main Hero text with Mask */}
           <div style={{
-            color: props.textColor,
+            color: textColor,
             fontSize: minDim * 0.16,
             fontFamily: 'Georgia, serif',
             fontWeight: 400,
@@ -91,13 +99,13 @@ export const Scene: React.FC<EditorialDesignProps> = (props) => {
             marginBottom: minDim * 0.02,
           }}>
             <TextMask direction="up" delay={5 / speed}>
-              {props.mainText}
+              {mainText}
             </TextMask>
           </div>
 
           {/* Sub text below with Mask */}
           <div style={{
-            color: props.textColor,
+            color: textColor,
             fontSize: minDim * 0.04,
             fontFamily: 'system-ui, -apple-system, sans-serif',
             fontWeight: 600,
@@ -110,7 +118,7 @@ export const Scene: React.FC<EditorialDesignProps> = (props) => {
             <div style={{
               width: minDim * 0.08,
               height: 1,
-              backgroundColor: props.textColor,
+              backgroundColor: textColor,
               marginRight: minDim * 0.03,
               opacity: secondaryOpacity,
               transform: `scaleX(${trackingProgress})`,
@@ -118,7 +126,7 @@ export const Scene: React.FC<EditorialDesignProps> = (props) => {
             }} />
 
             <TextMask direction="down" delay={25 / speed}>
-              {props.subText}
+              {subText}
             </TextMask>
           </div>
         </div>
