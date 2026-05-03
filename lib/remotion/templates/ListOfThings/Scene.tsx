@@ -76,7 +76,8 @@ function Scene(props: any) {
                   fontSize: minDim * 0.045,
                   fontWeight: 600,
                   color: (props.textColor ?? SCENE_PARAMS.textColor.value),
-                  fontFamily: (props.fontFamily ?? SCENE_PARAMS.fontFamily.value) + ", system-ui, sans-serif"
+                  fontFamily: (props.fontFamily ?? SCENE_PARAMS.fontFamily.value) + ", system-ui, sans-serif",
+                  whiteSpace: "nowrap"
                 }}>
                   {item.label}
                 </div>

@@ -1,4 +1,5 @@
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion'
+import { fitText } from '@remotion/layout-utils'
 import React from 'react'
 
 export interface FutureOfDesignProps {
@@ -23,7 +24,7 @@ export const defaultFutureOfDesignProps: FutureOfDesignProps = {
   textColor: '#FFFFFF',
   glowColor: '#FFFFFF',
   backgroundColor: '#0f172a',
-  scale: 1.45,
+  scale: 1.2,
   animationSpeed: 0.6,
   blurAmount: 30,
   slideDistance: 400,
@@ -52,6 +53,25 @@ export const Scene: React.FC<FutureOfDesignProps> = ({
   const speed = animationSpeed
   const adjustedFrame = frame * speed
   const scaleValue = scale
+
+  // Calculate optimized font sizes
+  const mainFontFamily = 'Georgia, serif'
+  const subFontFamily = 'system-ui, -apple-system, sans-serif'
+  const containerWidth = width * 0.9
+
+  const { fontSize: mainFontSize } = fitText({
+    text: mainText,
+    fontFamily: mainFontFamily,
+    withinWidth: containerWidth,
+    fontWeight: '400',
+  })
+
+  const { fontSize: subFontSize } = fitText({
+    text: subText,
+    fontFamily: subFontFamily,
+    withinWidth: containerWidth,
+    fontWeight: '600',
+  })
 
   // Main text — blur + slide from left
   const mainProgress = spring({
@@ -85,23 +105,24 @@ export const Scene: React.FC<FutureOfDesignProps> = ({
         transformOrigin: 'center center',
         position: 'relative',
         width: '100%',
-        maxWidth: minDim * 0.8,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
       }}>
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
           {/* Small text — floats above */}
           <div style={{
-            position: 'absolute',
             color: textColor,
             fontSize: minDim * 0.055,
-            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontFamily: subFontFamily,
             fontWeight: 400,
             opacity: Number(secondaryProgress) * 0.8,
             transform: `translateY(${secondaryY}px)`,
             letterSpacing: 1,
-            top: minDim * -0.04,
-            left: '50%',
-            marginLeft: minDim * -0.11,
+            marginBottom: minDim * 0.02,
+            textAlign: 'center',
+            textTransform: 'uppercase',
           }}>
             {smallText}
           </div>
@@ -109,8 +130,8 @@ export const Scene: React.FC<FutureOfDesignProps> = ({
           {/* Main text — italic serif, blur + slide */}
           <h1 style={{
             color: textColor,
-            fontSize: minDim * 0.18,
-            fontFamily: 'Georgia, serif',
+            fontSize: Math.min(mainFontSize, minDim * 0.22),
+            fontFamily: mainFontFamily,
             fontWeight: 400,
             fontStyle: 'italic',
             margin: 0,
@@ -120,6 +141,8 @@ export const Scene: React.FC<FutureOfDesignProps> = ({
             filter: `blur(${mainBlur}px) drop-shadow(0 0 ${glowIntensity}px ${glowColor})`,
             textShadow: `0 0 ${glowIntensity * 0.5}px ${glowColor}`,
             textAlign: 'center',
+            whiteSpace: 'nowrap',
+            lineHeight: 1,
           }}>
             {mainText}
           </h1>
@@ -127,14 +150,17 @@ export const Scene: React.FC<FutureOfDesignProps> = ({
           {/* Sub text — slides up from below */}
           <div style={{
             color: textColor,
-            fontSize: minDim * 0.042,
-            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: Math.min(subFontSize, minDim * 0.05),
+            fontFamily: subFontFamily,
             fontWeight: 600,
-            marginTop: minDim * -0.015,
+            marginTop: minDim * 0.01,
             opacity: Number(secondaryProgress) * 0.9,
             transform: `translateY(${-secondaryY}px)`,
             letterSpacing: minDim * 0.008,
             textAlign: 'center',
+            textTransform: 'uppercase',
+            width: '90%',
+            whiteSpace: 'nowrap',
           }}>
             {subText}
           </div>

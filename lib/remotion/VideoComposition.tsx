@@ -697,7 +697,7 @@ export const RepoReelVideo: React.FC<VideoProps> = (props) => {
       <TransitionSeries>
         {scenes.map((scene, i) => (
           <React.Fragment key={scene.id}>
-            <TransitionSeries.Sequence durationInFrames={scene.duration * fps}>
+            <TransitionSeries.Sequence durationInFrames={(scene.duration || (scene as any).durationSeconds || 5) * fps}>
               <SceneRouter scene={scene} repoName={repoName} repoUrl={repoUrl} theme={theme} />
             </TransitionSeries.Sequence>
             {i < scenes.length - 1 && (

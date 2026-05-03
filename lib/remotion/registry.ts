@@ -30,10 +30,12 @@ export const TEMPLATE_REGISTRY: TemplateDefinition[] = [
     loadComponent: () =>
       import('./MultiTemplateComposition').then((m) => m.MultiTemplateVideo as React.ComponentType<any>),
     calculateDuration: (scenes: ScriptScene[] | SceneDirective[], fps: number) => {
+      if (!scenes || !Array.isArray(scenes) || scenes.length === 0) return 30
+      
       // If we have SceneDirectives use their durationSeconds, otherwise fallback
-      const directives = scenes as SceneDirective[]
-      if (directives[0] && 'durationSeconds' in directives[0]) {
-        return calcMultiTemplateDurationInFrames(directives, fps)
+      const first = scenes[0] as any
+      if (first && 'durationSeconds' in first) {
+        return calcMultiTemplateDurationInFrames(scenes as SceneDirective[], fps)
       }
       return calcDurationInFrames(scenes as ScriptScene[], fps)
     },

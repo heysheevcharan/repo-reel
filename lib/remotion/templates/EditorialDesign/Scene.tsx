@@ -1,4 +1,5 @@
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion'
+import { fitText } from '@remotion/layout-utils'
 import React from 'react'
 import { TextMask } from './Components/TextMask'
 
@@ -52,6 +53,25 @@ export const Scene: React.FC<EditorialDesignProps> = ({
   const secondaryOpacity = interpolate(trackingProgress, [0, 1], [0, 0.8])
 
   const minDim = Math.min(width, height)
+  
+  // Calculate optimized font sizes
+  const mainFontFamily = 'Georgia, serif'
+  const subFontFamily = 'system-ui, -apple-system, sans-serif'
+  const maxLabelWidth = width * 0.7
+
+  const { fontSize: mainFontSize } = fitText({
+    text: mainText,
+    fontFamily: mainFontFamily,
+    withinWidth: maxLabelWidth,
+    fontWeight: '400',
+  })
+
+  const { fontSize: subFontSize } = fitText({
+    text: subText,
+    fontFamily: subFontFamily,
+    withinWidth: maxLabelWidth * 0.8,
+    fontWeight: '600',
+  })
 
   return (
     <AbsoluteFill style={{
@@ -74,16 +94,19 @@ export const Scene: React.FC<EditorialDesignProps> = ({
         <div style={{
           transform: `scale(${scale})`,
           transformOrigin: 'left center',
+          width: '100%',
         }}>
           {/* Small text above */}
           <div style={{
             color: textColor,
             fontSize: minDim * 0.04,
-            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontFamily: subFontFamily,
             fontWeight: 600,
             letterSpacing: `${letterSpacing}px`,
             opacity: secondaryOpacity,
             marginBottom: minDim * 0.02,
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
           }}>
             {smallText}
           </div>
@@ -91,12 +114,13 @@ export const Scene: React.FC<EditorialDesignProps> = ({
           {/* Main Hero text with Mask */}
           <div style={{
             color: textColor,
-            fontSize: minDim * 0.16,
-            fontFamily: 'Georgia, serif',
+            fontSize: Math.min(mainFontSize, minDim * 0.18),
+            fontFamily: mainFontFamily,
             fontWeight: 400,
             fontStyle: 'italic',
             lineHeight: 0.9,
             marginBottom: minDim * 0.02,
+            whiteSpace: 'nowrap',
           }}>
             <TextMask direction="up" delay={5 / speed}>
               {mainText}
@@ -106,13 +130,15 @@ export const Scene: React.FC<EditorialDesignProps> = ({
           {/* Sub text below with Mask */}
           <div style={{
             color: textColor,
-            fontSize: minDim * 0.04,
-            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: Math.min(subFontSize, minDim * 0.045),
+            fontFamily: subFontFamily,
             fontWeight: 600,
             letterSpacing: `${letterSpacing}px`,
             opacity: secondaryOpacity,
             display: 'flex',
             alignItems: 'center',
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
           }}>
             {/* Decorative line */}
             <div style={{

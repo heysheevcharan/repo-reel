@@ -33,7 +33,7 @@ export function calcMultiTemplateDurationInFrames(
   fps: number
 ): number {
   if (!scenes || !Array.isArray(scenes) || scenes.length === 0) return 30 // Fallback to 1 second
-  const totalSeconds = scenes.reduce((sum, s) => sum + (s.durationSeconds || 0), 0)
+  const totalSeconds = scenes.reduce((sum, s) => sum + (s.durationSeconds || 5), 0)
   return totalSeconds * fps + (scenes.length - 1) * TRANSITION_FRAMES
 }
 
@@ -65,7 +65,7 @@ export const MultiTemplateVideo: React.FC<MultiTemplateVideoProps> = (props) => 
         {sceneDirectives.map((scene, i) => (
           <React.Fragment key={scene.id}>
             <TransitionSeries.Sequence
-              durationInFrames={scene.durationSeconds * fps}
+              durationInFrames={(scene.durationSeconds || 5) * fps}
             >
               <DynamicTemplateRenderer
                 templateId={scene.templateId}

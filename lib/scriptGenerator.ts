@@ -285,6 +285,11 @@ Return ONLY the JSON array. No markdown fences.`
         }
       }
 
+      // Ensure durationSeconds is present and valid
+      if (typeof scene.durationSeconds !== 'number' || isNaN(scene.durationSeconds)) {
+        console.warn(`[scriptGenerator] Missing or invalid durationSeconds in scene ${idx + 1} — defaulting to 5s`)
+        scene.durationSeconds = 5
+      }
       // Ensure all required props are present — fill in defaults for missing ones
       const dictEntry = getDictEntry(scene.templateId)
       if (dictEntry) {

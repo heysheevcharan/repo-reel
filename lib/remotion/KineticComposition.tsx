@@ -506,7 +506,7 @@ export const KineticVideo: React.FC<KineticVideoProps> = (props) => {
       <TransitionSeries>
         {scenes.map((scene, i) => (
           <React.Fragment key={scene.id}>
-            <TransitionSeries.Sequence durationInFrames={scene.duration * fps}>
+            <TransitionSeries.Sequence durationInFrames={(scene.duration || (scene as any).durationSeconds || 5) * fps}>
               <KineticSceneRouter scene={scene} repoName={repoName} repoUrl={repoUrl} index={i} theme={theme} />
             </TransitionSeries.Sequence>
             {i < scenes.length - 1 && (
