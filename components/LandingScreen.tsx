@@ -16,6 +16,11 @@ const LOADING_PHRASES = [
   'Preparing your reel…',
 ]
 
+const SAMPLES = [
+  { name: 'Buffer', url: 'https://github.com/samirpatil2000/Buffer' },
+  { name: 'Claude Pulse', url: 'https://github.com/samirpatil2000/claude-pulse' },
+]
+
 export function LandingScreen({ onSubmit }: LandingScreenProps) {
   const [url, setUrl] = useState('')
   const [error, setError] = useState('')
@@ -118,6 +123,25 @@ export function LandingScreen({ onSubmit }: LandingScreenProps) {
           >
             Generate Reel →
           </Button>
+
+          {/* Sample chips */}
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <span className="text-xs text-white/40 font-medium">Try a sample:</span>
+            <div className="flex gap-2">
+              {SAMPLES.map((sample) => (
+                <button
+                  key={sample.url}
+                  onClick={() => {
+                    setUrl(sample.url)
+                    setError('')
+                  }}
+                  className="px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-full text-[11px] text-white/70 hover:text-white transition-all duration-300 backdrop-blur-sm"
+                >
+                  {sample.name}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Warning pills */}
