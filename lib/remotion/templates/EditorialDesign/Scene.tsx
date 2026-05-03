@@ -1,4 +1,4 @@
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion'
+import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Easing } from 'remotion'
 import { fitText } from '@remotion/layout-utils'
 import React from 'react'
 import { TextMask } from './Components/TextMask'
@@ -23,6 +23,34 @@ export const defaultEditorialDesignProps: EditorialDesignProps = {
   animationSpeed: 1,
 }
 
+const EditorialBg: React.FC<{ color: string }> = ({ color }) => {
+  const frame = useCurrentFrame()
+  
+  // Slow Ken Burns zoom + slight drift
+  const scale = interpolate(frame, [0, 300], [1, 1.15], { extrapolateRight: 'clamp' })
+  const driftX = Math.sin(frame * 0.01) * 20
+  
+  return (
+    <AbsoluteFill style={{ backgroundColor: color, overflow: 'hidden' }}>
+      <div style={{
+        position: 'absolute',
+        inset: -50,
+        transform: `scale(${scale}) translateX(${driftX}px)`,
+        background: `linear-gradient(135deg, ${color} 0%, #1a1a1a 100%)`,
+      }} />
+      
+      {/* Subtle light leak */}
+      <div style={{
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        background: 'radial-gradient(circle at 0% 0%, rgba(255,255,255,0.03) 0%, transparent 50%)',
+        opacity: Math.sin(frame * 0.02) * 0.5 + 0.5,
+      }} />
+    </AbsoluteFill>
+  )
+}
+
 export const Scene: React.FC<EditorialDesignProps> = ({
   smallText = defaultEditorialDesignProps.smallText,
   mainText = defaultEditorialDesignProps.mainText,
@@ -37,27 +65,12 @@ export const Scene: React.FC<EditorialDesignProps> = ({
 
   const speed = animationSpeed
   const adjustedFrame = frame * speed
-
-  // Background scale (Ken Burns)
-  const bgScale = interpolate(adjustedFrame, [0, 150], [1, 1.05], {
-    extrapolateRight: 'clamp',
-  })
-
-  // Tracking animation for supporting text
-  const trackingProgress = spring({
-    frame: Math.max(0, adjustedFrame - 20),
-    fps,
-    config: { damping: 26, stiffness: 40 },
-  })
-  const letterSpacing = interpolate(trackingProgress, [0, 1], [0, 4])
-  const secondaryOpacity = interpolate(trackingProgress, [0, 1], [0, 0.8])
-
   const minDim = Math.min(width, height)
   
   // Calculate optimized font sizes
   const mainFontFamily = 'Georgia, serif'
   const subFontFamily = 'system-ui, -apple-system, sans-serif'
-  const maxLabelWidth = width * 0.7
+  const maxLabelWidth = width * 0.75
 
   const { fontSize: mainFontSize } = fitText({
     text: mainText,
@@ -73,16 +86,19 @@ export const Scene: React.FC<EditorialDesignProps> = ({
     fontWeight: '600',
   })
 
+  // Entrance tracking animation
+  const trackingProgress = spring({
+    frame: Math.max(0, adjustedFrame - 15),
+    fps,
+    config: { damping: 26, stiffness: 40 },
+  })
+  
+  const letterSpacing = interpolate(trackingProgress, [0, 1], [0, 12], { easing: Easing.bezier(0.16, 1, 0.3, 1) })
+  const secondaryOpacity = interpolate(trackingProgress, [0, 1], [0, 1])
+
   return (
-    <AbsoluteFill style={{
-      backgroundColor: backgroundColor,
-      overflow: 'hidden',
-    }}>
-      {/* Background layer for Ken Burns */}
-      <AbsoluteFill style={{
-        transform: `scale(${bgScale})`,
-        backgroundColor: backgroundColor,
-      }} />
+    <AbsoluteFill style={{ overflow: 'hidden' }}>
+      <EditorialBg color={backgroundColor} />
 
       <AbsoluteFill style={{
         padding: minDim * 0.1,
@@ -102,13 +118,15 @@ export const Scene: React.FC<EditorialDesignProps> = ({
             fontSize: minDim * 0.04,
             fontFamily: subFontFamily,
             fontWeight: 600,
-            letterSpacing: `${letterSpacing}px`,
-            opacity: secondaryOpacity,
+            letterSpacing: `${letterSpacing * 0.5}px`,
+            opacity: secondaryOpacity * 0.6,
             marginBottom: minDim * 0.02,
             textTransform: 'uppercase',
             whiteSpace: 'nowrap',
           }}>
-            {smallText}
+            <TextMask direction="up" delay={0}>
+              {smallText}
+            </TextMask>
           </div>
 
           {/* Main Hero text with Mask */}
@@ -119,15 +137,15 @@ export const Scene: React.FC<EditorialDesignProps> = ({
             fontWeight: 400,
             fontStyle: 'italic',
             lineHeight: 0.9,
-            marginBottom: minDim * 0.02,
+            marginBottom: minDim * 0.04,
             whiteSpace: 'nowrap',
           }}>
-            <TextMask direction="up" delay={5 / speed}>
+            <TextMask direction="up" delay={8 / speed} stiffness={60} damping={18}>
               {mainText}
             </TextMask>
           </div>
 
-          {/* Sub text below with Mask */}
+          {/* Sub text below with Mask & Animated Line */}
           <div style={{
             color: textColor,
             fontSize: Math.min(subFontSize, minDim * 0.045),
@@ -140,18 +158,18 @@ export const Scene: React.FC<EditorialDesignProps> = ({
             textTransform: 'uppercase',
             whiteSpace: 'nowrap',
           }}>
-            {/* Decorative line */}
+            {/* Decorative line - animates from left */}
             <div style={{
-              width: minDim * 0.08,
-              height: 1,
+              width: minDim * 0.12,
+              height: 2,
               backgroundColor: textColor,
-              marginRight: minDim * 0.03,
-              opacity: secondaryOpacity,
-              transform: `scaleX(${trackingProgress})`,
+              marginRight: minDim * 0.04,
+              opacity: secondaryOpacity * 0.8,
+              transform: `scaleX(${interpolate(trackingProgress, [0, 1], [0, 1])})`,
               transformOrigin: 'left',
             }} />
 
-            <TextMask direction="down" delay={25 / speed}>
+            <TextMask direction="down" delay={28 / speed} stiffness={70} damping={22}>
               {subText}
             </TextMask>
           </div>

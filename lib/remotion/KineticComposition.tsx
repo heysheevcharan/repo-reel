@@ -7,6 +7,7 @@ import {
   spring,
   useCurrentFrame,
   useVideoConfig,
+  Easing
 } from 'remotion'
 import { TransitionSeries, linearTiming } from '@remotion/transitions'
 import { fade } from '@remotion/transitions/fade'
@@ -38,7 +39,7 @@ const FONT = {
 }
 
 const SPRING = {
-  WORD:  { damping: 6,  stiffness: 420 }, // very snappy, intentional overshoot — kinetic words
+  WORD:  { damping: 8,  stiffness: 450 }, // very snappy, intentional overshoot — kinetic words
   SUB:   { damping: 16, stiffness: 150 }, // smooth settle — subtext reveals
   BADGE: { damping: 10, stiffness: 250 }, // crisp — install badge, url card
 }
@@ -102,24 +103,21 @@ function WordHit({
       : 0
 
   const scale =
-    interpolate(s, [0, 1], [1.6, 1.0]) *
-    interpolate(exitProgress, [0, 1], [1, 0.75])
+    interpolate(s, [0, 1], [1.8, 1.0]) *
+    interpolate(exitProgress, [0, 1], [1, 0.8])
   const opacity =
-    interpolate(s, [0, 0.2], [0, 1], { extrapolateRight: 'clamp' }) *
+    interpolate(s, [0, 0.15], [0, 1], { extrapolateRight: 'clamp' }) *
     interpolate(exitProgress, [0, 1], [1, 0])
 
   // Letter spacing compresses as word slams in — eased so compression accelerates
   const easedS = EASE.OUT_EXPO(Math.min(1, Math.max(0, s)))
-  const letterSpacing = interpolate(easedS, [0, 1], [40, -2])
+  const letterSpacing = interpolate(easedS, [0, 1], [60, -4])
 
-  // Accent line draws in quickly
-  const lineWidth = interpolate(frame, [0, 8], [0, 240], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  })
+  // Motion blur simulation
+  const blur = interpolate(s, [0, 0.5, 1], [20, 5, 0])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', transform: `scale(${scale})`, opacity }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', transform: `scale(${scale})`, opacity, filter: `blur(${blur}px)` }}>
       <div style={{
         fontSize,
         fontWeight: 900,
@@ -130,14 +128,15 @@ function WordHit({
         lineHeight: 1,
         textAlign: 'center',
         whiteSpace: 'nowrap',
+        textShadow: `0 0 20px ${color}40`,
       }}>
         {text}
       </div>
       {showAccentLine && (
         <div style={{
-          marginTop: 18,
-          height: 5,
-          width: lineWidth,
+          marginTop: 24,
+          height: 6,
+          width: interpolate(frame, [0, 10], [0, 300], { extrapolateRight: 'clamp' }),
           background: `linear-gradient(90deg, ${accentColor}, transparent)`,
           borderRadius: 3,
         }} />
@@ -155,62 +154,64 @@ function SubtextReveal({ text, color }: { text: string; color: string }) {
 
   return (
     <div style={{
-      fontSize: 32,
+      fontSize: 34,
       fontFamily: FONT.DISPLAY,
       fontWeight: 400,
       color,
-      letterSpacing: 4,
+      letterSpacing: 6,
       textTransform: 'uppercase',
       opacity: interpolate(s, [0, 1], [0, 1]),
-      transform: `translateY(${interpolate(s, [0, 1], [24, 0])}px)`,
+      transform: `translateY(${interpolate(s, [0, 1], [30, 0])}px)`,
       textAlign: 'center',
-      maxWidth: 1200,
-      lineHeight: 1.7,
+      maxWidth: 1300,
+      lineHeight: 1.6,
     }}>
       {text}
     </div>
   )
 }
 
-// ─── AccentLines — sweep in fast from left ────────────────────────────────────
+// ─── KineticBackground — senior motion designer level black bg ────────────────
 
-function AccentLines({ color, frame }: { color: string; frame: number }) {
-  const w1 = interpolate(frame, [0, 8], [0, 1920], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  })
-  const w2 = interpolate(frame, [3, 11], [0, 1920], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  })
-  return (
-    <>
-      <div style={{ position: 'absolute', bottom: 68, left: 0, height: 3, width: w1, backgroundColor: color, opacity: 0.7 }} />
-      <div style={{ position: 'absolute', bottom: 58, left: 0, height: 1, width: w2, backgroundColor: color, opacity: 0.25 }} />
-    </>
-  )
-}
-
-// ─── MicroMotionBg — subtle breathing to keep every frame alive ──────────────
-
-function MicroMotionBg({ color }: { color: string }) {
+const KineticBackground: React.FC<{ color: string }> = ({ color }) => {
   const frame = useCurrentFrame()
-  const breathe = 1 + 0.014 * Math.sin(frame * 0.07)
-  const intensityMod = 0.6 + 0.4 * Math.abs(Math.sin(frame * 0.018))
-  const driftX = 50 + 8 * Math.sin(frame * 0.035)
-  const driftY = 50 + 6 * Math.cos(frame * 0.045)
-
+  const { width, height } = useVideoConfig()
+  
+  // Subtle moving vignette
+  const driftX = Math.sin(frame * 0.04) * 20
+  const driftY = Math.cos(frame * 0.03) * 15
+  
   return (
-    <div style={{
-      position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden',
-      transform: `scale(${breathe})`,
-    }}>
+    <AbsoluteFill style={{ backgroundColor: '#000000', overflow: 'hidden' }}>
+      {/* Moving Accent Glow */}
       <div style={{
-        position: 'absolute', inset: 0,
-        background: `radial-gradient(ellipse at ${driftX}% ${driftY}%, ${color}28 0%, transparent 60%)`,
-        opacity: intensityMod,
+        position: 'absolute',
+        width: width * 1.2,
+        height: height * 1.2,
+        left: -width * 0.1 + driftX,
+        top: -height * 0.1 + driftY,
+        background: `radial-gradient(circle at center, ${color}15 0%, transparent 65%)`,
+        filter: 'blur(80px)',
       }} />
-    </div>
+      
+      {/* Scanline / Grid effect */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        opacity: 0.04,
+        backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px)',
+        backgroundSize: '100% 4px',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Vignette Overlay */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'radial-gradient(circle, transparent 40%, black 100%)',
+        opacity: 0.7,
+      }} />
+    </AbsoluteFill>
   )
 }
 
@@ -225,10 +226,10 @@ function SceneIndexLabel({ index, title, color }: { index: number; title: string
   return (
     <div style={{
       position: 'absolute', top: 52, left: 72, zIndex: 10,
-      display: 'flex', alignItems: 'center', gap: 10, opacity,
+      display: 'flex', alignItems: 'center', gap: 12, opacity,
     }}>
-      <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color, boxShadow: `0 0 10px ${color}` }} />
-      <span style={{ color: '#ffffff50', fontSize: 12, fontFamily: FONT.MONO, letterSpacing: 4, textTransform: 'uppercase' }}>
+      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, boxShadow: `0 0 15px ${color}` }} />
+      <span style={{ color: '#ffffff60', fontSize: 14, fontFamily: FONT.MONO, letterSpacing: 5, textTransform: 'uppercase' }}>
         {String(index + 1).padStart(2, '0')} — {title}
       </span>
     </div>
@@ -248,23 +249,20 @@ function KineticSceneBase({
   const words = (scene.headline || scene.title).split(' ').filter(Boolean)
   const hasSubtext = !!scene.subtext
 
-  // Clamp between min and max — short words get at least MIN_FRAMES, long words don't overstay
   const naturalFramesPerWord = Math.floor(durationInFrames / (words.length + (hasSubtext ? 1 : 0)))
   const framesPerWord = Math.max(MIN_FRAMES_PER_WORD, Math.min(MAX_FRAMES_PER_WORD, naturalFramesPerWord))
   const subtextStart = words.length * framesPerWord
 
   const fontSize =
-    words.length === 1 ? 340 :
-    words.length === 2 ? 260 :
-    words.length <= 4 ? 190 : 140
+    words.length === 1 ? 380 :
+    words.length === 2 ? 300 :
+    words.length <= 4 ? 220 : 160
 
   return (
-    <AbsoluteFill style={{ backgroundColor: '#000000' }}>
-      <MicroMotionBg color={accentColor} />
-      <AccentLines color={accentColor} frame={frame} />
+    <AbsoluteFill>
+      <KineticBackground color={accentColor} />
       <SceneIndexLabel index={index} title={scene.title} color={accentColor} />
-      {/* Shock flash on problem→solution cut */}
-      <FlashCut color={isShock ? accentColor : '#ffffff'} frames={isShock ? 4 : 3} />
+      <FlashCut color={isShock ? accentColor : '#ffffff'} frames={isShock ? 5 : 3} />
 
       {words.map((word, i) => {
         const isLast = i === words.length - 1
@@ -292,7 +290,7 @@ function KineticSceneBase({
       {hasSubtext && (
         <Sequence from={subtextStart} durationInFrames={9999} layout="none">
           <AbsoluteFill style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <SubtextReveal text={scene.subtext!} color={`${accentColor}cc`} />
+            <SubtextReveal text={scene.subtext!} color={`${accentColor}ee`} />
           </AbsoluteFill>
         </Sequence>
       )}
@@ -308,7 +306,6 @@ function KineticFeaturesScene({ scene, index, theme }: { scene: ScriptScene; ind
   const accentColor = sceneColor(scene.id, theme)
   const bullets = scene.bullets?.filter(Boolean).slice(0, 4) ?? []
 
-  // Distribute frames proportionally by word count
   const wordCounts = bullets.map(b => b.split(' ').length)
   const totalWords = wordCounts.reduce((a, b) => a + b, 0)
   const bulletFrames = wordCounts.map(wc => Math.max(MIN_FRAMES_PER_WORD * 2, Math.min(MAX_FRAMES_PER_BULLET, Math.floor((wc / totalWords) * durationInFrames))))
@@ -316,20 +313,21 @@ function KineticFeaturesScene({ scene, index, theme }: { scene: ScriptScene; ind
     [...acc, i === 0 ? 0 : acc[i - 1] + bulletFrames[i - 1]], [])
 
   return (
-    <AbsoluteFill style={{ backgroundColor: '#000000' }}>
-      <MicroMotionBg color={accentColor} />
-      <AccentLines color={accentColor} frame={frame} />
+    <AbsoluteFill>
+      <KineticBackground color={accentColor} />
       <SceneIndexLabel index={index} title={scene.title} color={accentColor} />
       <FlashCut color="#ffffff" frames={3} />
 
       {bullets.map((bullet, i) => {
         const wordCount = bullet.split(' ').length
-        const fontSize = wordCount <= 2 ? 210 : wordCount <= 4 ? 140 : 100
+        const fontSize = wordCount <= 2 ? 240 : wordCount <= 4 ? 160 : 120
         const isLast = i === bullets.length - 1
         return (
           <Sequence key={i} from={bulletOffsets[i]} durationInFrames={isLast ? 9999 : bulletFrames[i] + 2} layout="none">
-            <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-              <BulletCounter index={i} total={bullets.length} accentColor={accentColor} />
+            <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
+              <div style={{ fontSize: 16, fontFamily: FONT.MONO, color: accentColor, textTransform: 'uppercase', letterSpacing: 8 }}>
+                {String(i + 1).padStart(2, '0')} / {String(bullets.length).padStart(2, '0')}
+              </div>
               <WordHit
                 text={bullet}
                 exitFrame={isLast ? undefined : bulletFrames[i] - 4}
@@ -346,27 +344,11 @@ function KineticFeaturesScene({ scene, index, theme }: { scene: ScriptScene; ind
   )
 }
 
-function BulletCounter({ index, total, accentColor }: { index: number; total: number; accentColor: string }) {
-  const frame = useCurrentFrame()
-  const { fps } = useVideoConfig()
-  const s = spring({ frame, fps, config: SPRING.BADGE })
-  return (
-    <div style={{
-      fontSize: 13, fontFamily: FONT.MONO, letterSpacing: 5,
-      color: accentColor, textTransform: 'uppercase',
-      opacity: interpolate(s, [0, 1], [0, 1]),
-    }}>
-      {String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
-    </div>
-  )
-}
-
 // ─── KineticCTAScene ──────────────────────────────────────────────────────────
 
 function KineticCTAScene({ scene, repoUrl, index, theme }: {
   scene: ScriptScene; repoUrl: string; index: number; theme?: ProjectTheme
 }) {
-  const frame = useCurrentFrame()
   const { durationInFrames } = useVideoConfig()
   const accentColor = sceneColor(scene.id, theme)
   const words = (scene.headline || 'Star on GitHub').split(' ').filter(Boolean)
@@ -378,9 +360,8 @@ function KineticCTAScene({ scene, repoUrl, index, theme }: {
   const installCmd = theme?.installCommand
 
   return (
-    <AbsoluteFill style={{ backgroundColor: '#000000' }}>
-      <MicroMotionBg color={accentColor} />
-      <AccentLines color={accentColor} frame={frame} />
+    <AbsoluteFill>
+      <KineticBackground color={accentColor} />
       <SceneIndexLabel index={index} title={scene.title} color={accentColor} />
       <FlashCut color={accentColor} frames={4} />
 
@@ -393,7 +374,7 @@ function KineticCTAScene({ scene, repoUrl, index, theme }: {
                 text={word}
                 exitFrame={isLast ? undefined : wordSlots - 4}
                 color={isLast ? accentColor : '#ffffff'}
-                fontSize={words.length <= 2 ? 300 : 200}
+                fontSize={words.length <= 2 ? 340 : 220}
                 accentColor={accentColor}
               />
             </AbsoluteFill>
@@ -402,52 +383,20 @@ function KineticCTAScene({ scene, repoUrl, index, theme }: {
       })}
 
       <Sequence from={urlStart} durationInFrames={9999} layout="none">
-        <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 100, gap: 16 }}>
-          {installCmd && <InstallBadge cmd={installCmd} accentColor={accentColor} />}
-          <UrlCard url={shortUrl} accentColor={accentColor} />
+        <AbsoluteFill style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 120, gap: 24 }}>
+          {installCmd && (
+             <div style={{ padding: '16px 36px', border: `1px solid ${accentColor}80`, borderRadius: 12, background: `${accentColor}20`, display: 'flex', gap: 16, alignItems: 'center' }}>
+               <span style={{ color: accentColor, fontFamily: FONT.MONO, fontSize: 20 }}>$</span>
+               <span style={{ color: 'white', fontFamily: FONT.MONO, fontSize: 24 }}>{installCmd}</span>
+             </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+             <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: accentColor }} />
+             <span style={{ color: '#ffffff80', fontSize: 24, fontFamily: FONT.MONO }}>{shortUrl}</span>
+          </div>
         </AbsoluteFill>
       </Sequence>
     </AbsoluteFill>
-  )
-}
-
-function InstallBadge({ cmd, accentColor }: { cmd: string; accentColor: string }) {
-  const frame = useCurrentFrame()
-  const { fps } = useVideoConfig()
-  const s = spring({ frame, fps, config: SPRING.BADGE })
-  return (
-    <div style={{
-      display: 'inline-flex', alignItems: 'center', gap: 12,
-      padding: '14px 30px',
-      border: `1px solid ${accentColor}70`,
-      borderRadius: 10,
-      background: `${accentColor}18`,
-      opacity: interpolate(s, [0, 1], [0, 1]),
-      transform: `translateY(${interpolate(s, [0, 1], [24, 0])}px)`,
-    }}>
-      <span style={{ color: accentColor, fontSize: 16, fontFamily: FONT.MONO, letterSpacing: 2 }}>$</span>
-      <span style={{ color: '#ffffffee', fontSize: 20, fontFamily: FONT.MONO, letterSpacing: 0.5 }}>{cmd}</span>
-    </div>
-  )
-}
-
-function UrlCard({ url, accentColor }: { url: string; accentColor: string }) {
-  const frame = useCurrentFrame()
-  const { fps } = useVideoConfig()
-  const s = spring({ frame: Math.max(0, frame - 6), fps, config: SPRING.SUB })
-  return (
-    <div style={{
-      display: 'inline-flex', alignItems: 'center', gap: 14,
-      padding: '14px 32px',
-      border: `1px solid ${accentColor}40`,
-      borderRadius: 10,
-      background: `${accentColor}0e`,
-      opacity: interpolate(s, [0, 1], [0, 1]),
-      transform: `translateY(${interpolate(s, [0, 1], [20, 0])}px)`,
-    }}>
-      <div style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: accentColor, boxShadow: `0 0 12px ${accentColor}` }} />
-      <span style={{ color: '#ffffffbb', fontSize: 20, fontFamily: FONT.MONO, letterSpacing: 1 }}>{url}</span>
-    </div>
   )
 }
 
@@ -462,7 +411,6 @@ function KineticSceneRouter({ scene, repoName, repoUrl, index, theme }: {
   if (scene.id === 'scene5') return <KineticCTAScene scene={scene} repoUrl={repoUrl} index={index} theme={theme} />
 
   const highlightWordIndex = scene.id === 'scene2' ? 999 : 0
-  // scene3 (solution) gets an accent-colored shock flash — the "aha" moment
   const isShock = scene.id === 'scene3'
 
   return (
@@ -479,12 +427,10 @@ function KineticSceneRouter({ scene, repoName, repoUrl, index, theme }: {
 // ─── KineticVideo ─────────────────────────────────────────────────────────────
 
 export const KineticVideo: React.FC<KineticVideoProps> = (props) => {
-  // Guard: Remotion Player may call the component with null props during initial mount
   if (!props || !props.scenes) return null
   const { scenes, repoName, repoUrl, theme, audioConfig } = props
   const { fps } = useVideoConfig()
 
-  // Resolve music track URL
   const musicUrl = audioConfig
     ? MUSIC_TRACKS.find((t) => t.id === audioConfig.musicTrackId)?.url
     : undefined
@@ -492,7 +438,6 @@ export const KineticVideo: React.FC<KineticVideoProps> = (props) => {
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000000' }}>
-      {/* Background music — looped, with fade-in */}
       {musicUrl && (
         <Audio
           src={musicUrl}

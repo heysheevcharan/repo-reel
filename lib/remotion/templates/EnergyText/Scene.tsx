@@ -1,87 +1,100 @@
-// Template: energy-text
-// Description: No description available
-// Scene: Scene 1
-
-import { AbsoluteFill, spring, interpolate, useCurrentFrame, useVideoConfig, Img, Audio, Sequence, Loop, OffthreadVideo } from "remotion";
+import { AbsoluteFill, spring, interpolate, useCurrentFrame, useVideoConfig, Easing } from "remotion";
 import React from "react";
 
-const SCENE_PARAMS = {
-  beText: { type: "text", label: "Top Left Text", value: "BE" },
-  theText: { type: "text", label: "Top Right Text", value: "THE" },
-  mainWord: { type: "text", label: "Main Word", value: "ENERGY" },
-  youText: { type: "text", label: "Bottom 1", value: "YOU" },
-  wantText: { type: "text", label: "Bottom 2", value: "WANT" },
-  toText: { type: "text", label: "Bottom 3", value: "TO" },
-  attractText: { type: "text", label: "Bottom 4", value: "ATTRACT" },
-  fontFamily: { type: "font", label: "Font", value: "Inter" },
-  backgroundColor: { type: "color", label: "Background Color", value: "#ffffff" },
-  textColor: { type: "color", label: "Text Color", value: "#000000" },
-  disintegrationIntensity: { type: "number", label: "Max Disintegration", value: 120, min: 20, max: 300, step: 10 },
-  scale: { type: "number", label: "Overall Scale", value: 1, min: 0.5, max: 2, step: 0.05 },
-  animationSpeed: { type: "number", label: "Animation Speed", value: 1, min: 0.5, max: 2, step: 0.1 },
+export interface EnergyTextProps {
+  beText: string;
+  theText: string;
+  mainWord: string;
+  youText: string;
+  wantText: string;
+  toText: string;
+  attractText: string;
+  backgroundColor: string;
+  textColor: string;
+  disintegrationIntensity: number;
+  scale: number;
+  animationSpeed: number;
+}
+
+export const defaultEnergyTextProps: EnergyTextProps = {
+  beText: "BE",
+  theText: "THE",
+  mainWord: "ENERGY",
+  youText: "YOU",
+  wantText: "WANT",
+  toText: "TO",
+  attractText: "ATTRACT",
+  backgroundColor: "#ffffff",
+  textColor: "#000000",
+  disintegrationIntensity: 120,
+  scale: 1,
+  animationSpeed: 1,
 };
 
-function Scene(props: any) {
+const NoiseOverlay: React.FC<{ opacity: number }> = ({ opacity }) => (
+  <AbsoluteFill style={{ 
+    opacity, 
+    pointerEvents: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+  }} />
+);
+
+export const Scene: React.FC<EnergyTextProps> = (props) => {
+  const p = { ...defaultEnergyTextProps, ...props };
   const frame = useCurrentFrame();
-  const { fps, width, height, durationInFrames } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
   const minDim = Math.min(width, height);
-  const speed = (props.animationSpeed ?? SCENE_PARAMS.animationSpeed.value);
+  const speed = p.animationSpeed;
   const adjustedFrame = frame * speed;
 
-  // Timings based on a 120-frame cycle (re-calibrated to clip duration)
-  const relativeFrame = (frame / durationInFrames) * 120 * speed;
-
-  // Surrounding text entry
+  // Staggered springs for words
+  const springConfig = { damping: 12, stiffness: 120 };
+  
   const textEntrance = spring({
-    frame: relativeFrame,
+    frame: adjustedFrame,
     fps,
-    config: { damping: 20, stiffness: 100 },
+    config: springConfig,
   });
 
-  // "ENERGY" entry
   const energyEntrance = spring({
-    frame: Math.max(0, relativeFrame - 15),
+    frame: Math.max(0, adjustedFrame - 10),
     fps,
-    config: { damping: 20, stiffness: 80 },
+    config: { damping: 8, stiffness: 180 },
   });
 
-  // Disintegration logic
-  // The effect starts after the word is visible and increases over time
-  const noiseStart = 45;
+  // Kinetic "pulse" throughout the scene
+  const pulse = 1 + Math.sin(frame * 0.15) * 0.02 * energyEntrance;
+
+  // Disintegration effect progress
   const noiseProgress = interpolate(
-    relativeFrame,
-    [noiseStart, noiseStart + 40, noiseStart + 60],
-    [0, 1, 0.9], // Peak disintegration then settles slightly
-    { extrapolateRight: "clamp" }
+    adjustedFrame,
+    [40, 60, 90],
+    [0, 1.2, 1],
+    { extrapolateRight: "clamp", easing: Easing.bezier(0.33, 1, 0.68, 1) }
   );
 
-  const displacementScale = noiseProgress * (props.disintegrationIntensity ?? SCENE_PARAMS.disintegrationIntensity.value);
-  const turbulenceSeed = Math.floor(relativeFrame / 2); // Animate the noise texture
-
-  // Text Style constants
-  const secondaryFontSize = minDim * 0.045;
-  const mainFontSize = minDim * 0.22;
-  const fontStack = (props.fontFamily ?? SCENE_PARAMS.fontFamily.value) + ", system-ui, sans-serif";
+  const displacementScale = noiseProgress * p.disintegrationIntensity;
+  const turbulenceSeed = Math.floor(adjustedFrame / 2);
 
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: (props.backgroundColor ?? SCENE_PARAMS.backgroundColor.value),
+        backgroundColor: p.backgroundColor,
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        fontFamily: fontStack,
-        color: (props.textColor ?? SCENE_PARAMS.textColor.value),
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        color: p.textColor,
         overflow: "hidden",
       }}
     >
-      {/* SVG Filters for Disintegration Effect */}
+      <NoiseOverlay opacity={0.05} />
+
       <svg style={{ position: "absolute", width: 0, height: 0 }}>
         <filter id="disintegrateFilter">
-          {/* fractalNoise creates the high-frequency displacement map */}
           <feTurbulence
             type="fractalNoise"
-            baseFrequency="0.25"
+            baseFrequency="0.2"
             numOctaves="2"
             seed={turbulenceSeed}
             result="noise"
@@ -93,13 +106,9 @@ function Scene(props: any) {
             xChannelSelector="R"
             yChannelSelector="G"
           />
-          {/* This matrix sharpens the resulting noise for that "shredded black and white" look */}
           <feColorMatrix
             type="matrix"
-            values="1 0 0 0 0
-                    0 1 0 0 0
-                    0 0 1 0 0
-                    0 0 0 15 -7"
+            values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 18 -9"
           />
         </filter>
       </svg>
@@ -107,81 +116,75 @@ function Scene(props: any) {
       <div
         style={{
           width: "90%",
-          height: "60%",
+          height: "70%",
           position: "relative",
-          transform: `scale(${(props.scale ?? SCENE_PARAMS.scale.value)})`,
+          transform: `scale(${p.scale * pulse})`,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '40px 0',
         }}
       >
         {/* Top Line */}
-        <div
-          style={{
-            position: "absolute",
-            top: "0%",
-            left: "5%",
-            opacity: textEntrance,
-            fontSize: secondaryFontSize,
-            fontWeight: 400,
-            letterSpacing: "0.05em",
-          }}
-        >
-          {(props.beText ?? SCENE_PARAMS.beText.value)}
-        </div>
-        <div
-          style={{
-            position: "absolute",
-            top: "0%",
-            right: "5%",
-            opacity: textEntrance,
-            fontSize: secondaryFontSize,
-            fontWeight: 400,
-            letterSpacing: "0.05em",
-          }}
-        >
-          {(props.theText ?? SCENE_PARAMS.theText.value)}
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', opacity: textEntrance }}>
+          <div style={{ 
+            fontSize: minDim * 0.06, 
+            fontWeight: 700, 
+            letterSpacing: interpolate(textEntrance, [0, 1], [10, 2]),
+            transform: `translateX(${interpolate(textEntrance, [0, 1], [-40, 0])}px)`
+          }}>
+            {p.beText}
+          </div>
+          <div style={{ 
+            fontSize: minDim * 0.06, 
+            fontWeight: 700, 
+            letterSpacing: interpolate(textEntrance, [0, 1], [10, 2]),
+            transform: `translateX(${interpolate(textEntrance, [0, 1], [40, 0])}px)`
+          }}>
+            {p.theText}
+          </div>
         </div>
 
         {/* Main Word "ENERGY" */}
         <div
           style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: `translate(-50%, -50%) scale(${interpolate(energyEntrance, [0, 1], [0.95, 1])})`,
+            transform: `scale(${interpolate(energyEntrance, [0, 1], [0.8, 1])}) rotate(${interpolate(energyEntrance, [0, 1], [-5, 0])}deg)`,
             opacity: energyEntrance,
             filter: "url(#disintegrateFilter)",
-            fontSize: mainFontSize,
-            fontWeight: 800,
+            fontSize: minDim * 0.28,
+            fontWeight: 900,
             textAlign: "center",
             width: "100%",
-            lineHeight: 1,
+            lineHeight: 0.8,
+            fontFamily: 'Arial Black, sans-serif',
+            letterSpacing: interpolate(energyEntrance, [0, 1], [20, -10]),
           }}
         >
-          {(props.mainWord ?? SCENE_PARAMS.mainWord.value)}
+          {p.mainWord}
         </div>
 
         {/* Bottom Line */}
         <div
           style={{
-            position: "absolute",
-            bottom: "0%",
             width: "100%",
             display: "flex",
             justifyContent: "space-between",
             opacity: textEntrance,
-            fontSize: secondaryFontSize,
-            fontWeight: 400,
-            letterSpacing: "0.02em",
-            padding: "0 2%",
+            fontSize: minDim * 0.045,
+            fontWeight: 600,
+            letterSpacing: interpolate(textEntrance, [0, 1], [0, 6]),
+            textTransform: 'uppercase',
           }}
         >
-          <span>{(props.youText ?? SCENE_PARAMS.youText.value)}</span>
-          <span>{(props.wantText ?? SCENE_PARAMS.wantText.value)}</span>
-          <span>{(props.toText ?? SCENE_PARAMS.toText.value)}</span>
-          <span>{(props.attractText ?? SCENE_PARAMS.attractText.value)}</span>
+          <span>{p.youText}</span>
+          <span>{p.wantText}</span>
+          <span>{p.toText}</span>
+          <span>{p.attractText}</span>
         </div>
       </div>
     </AbsoluteFill>
   );
-}
+};
 
 export default Scene;
