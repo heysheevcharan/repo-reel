@@ -57,41 +57,54 @@ function TemplateCard({
   inputProps: any
   onClick: () => void
 }) {
+  const [isHovered, setIsHovered] = useState(false)
   const component = useTemplateComponent(tpl.id)
   const durationInFrames = tpl.id === 'multiTemplate' 
     ? tpl.calculateDuration(inputProps.sceneDirectives, FPS)
     : tpl.calculateDuration(inputProps.scenes, FPS)
+  
+  const shouldPlay = isSelected || isHovered
 
   return (
     <button
       onClick={onClick}
-      className="group relative rounded-xl overflow-hidden text-left transition-all duration-400 border-2"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="group relative rounded-xl overflow-hidden text-left transition-all duration-500 border-2"
       style={{
-        borderColor: isSelected ? 'rgba(99,102,241,0.7)' : 'rgba(255,255,255,0.06)',
-        boxShadow: isSelected
-          ? '0 0 24px rgba(99,102,241,0.2), 0 0 0 1px rgba(99,102,241,0.3)'
+        borderColor: isSelected ? 'rgba(99,102,241,0.9)' : 'rgba(255,255,255,0.06)',
+        transform: isHovered ? 'translateY(-2px)' : 'none',
+        boxShadow: isSelected || isHovered
+          ? '0 20px 40px -12px rgba(0,0,0,0.5), 0 0 20px rgba(99,102,241,0.1)'
           : 'none',
       }}
     >
       {/* Video preview */}
       <div className="relative bg-black" style={{ aspectRatio: '16/9' }}>
         {component ? (
-          <Player
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            component={component as any}
-            inputProps={{ 
-              ...inputProps, 
-              audioConfig: { musicTrackId: 'none', musicVolume: 0 } 
-            }}
-            durationInFrames={durationInFrames || 1}
-            fps={FPS}
-            compositionWidth={1920}
-            compositionHeight={1080}
-            style={{ width: '100%', height: '100%', display: 'block', pointerEvents: 'none' }}
-            numberOfSharedAudioTags={0}
-            autoPlay
-            loop
-          />
+            <Player
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              component={component as any}
+              inputProps={{ 
+                ...inputProps, 
+                audioConfig: { musicTrackId: 'none', musicVolume: 0 } 
+              }}
+              durationInFrames={durationInFrames || 1}
+              fps={FPS}
+              compositionWidth={1920}
+              compositionHeight={1080}
+              style={{ 
+                width: '100%', 
+                height: '100%', 
+                display: 'block', 
+                pointerEvents: 'none',
+                opacity: shouldPlay ? 1 : 0.6,
+                transition: 'opacity 0.3s ease'
+              }}
+              numberOfSharedAudioTags={0}
+              autoPlay={shouldPlay}
+              loop
+            />
         ) : (
           /* Loading skeleton */
           <div className="w-full h-full flex items-center justify-center bg-white/5">

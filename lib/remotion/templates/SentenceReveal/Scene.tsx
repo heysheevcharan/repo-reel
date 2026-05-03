@@ -1,205 +1,166 @@
-// Template: sentence-reveal
-// Description: No description available
-// Scene: Scene 1
-
-import { AbsoluteFill, spring, interpolate, useCurrentFrame, useVideoConfig, Img, Audio, Sequence, Loop, OffthreadVideo } from "remotion";
+import { AbsoluteFill, spring, interpolate, useCurrentFrame, useVideoConfig, Easing } from "remotion";
 import React from "react";
 
-const SCENE_PARAMS = {
-  word1: { type: "text", label: "Word 1", value: "ui-design-system" },
-  word2: { type: "text", label: "Word 2", value: "interface-design" },
-  word3: { type: "text", label: "Word 3", value: "swiftui-ui-patterns" },
-  word4: { type: "text", label: "Word 4", value: "interaction-design" },
-  word5: { type: "text", label: "Word 5", value: "ui-ux-pro-max" },
-  word6: { type: "text", label: "Word 6", value: "web-design-guidelines" },
-  word7: { type: "text", label: "Word 7", value: "frontend-design" },
-  fontFamily: { type: "font", label: "Font", value: "Roboto" },
-  backgroundColor: { type: "color", label: "Background", value: "#fcfcfc" },
-  mutedTextColor: { type: "color", label: "Muted Text", value: "#999999" },
-  activeTextColor: { type: "color", label: "Active Text", value: "#1a1a1a" },
-  scale: { type: "number", label: "Scale", value: 1.2, min: 0.5, max: 2, step: 0.05 },
-  animationSpeed: { type: "number", label: "Animation Speed", value: 1, min: 0.5, max: 2, step: 0.1 },
-  cycleFrames: { type: "number", label: "Frames Per Word", value: 50, min: 20, max: 90, step: 5 },
-  fontSize: { type: "number", label: "Font Size", value: 0.042, min: 0.025, max: 0.08, step: 0.005 },
-  lineSpacing: { type: "number", label: "Line Spacing", value: 2.2, min: 1.5, max: 3.5, step: 0.1 },
-  curveIntensity: { type: "number", label: "Curve Intensity", value: 300, min: 0, max: 300, step: 10 },
-  blurAmount: { type: "number", label: "Blur Amount", value: 5, min: 0, max: 20, step: 1 },
+export interface SentenceRevealProps {
+  word1: string;
+  word2: string;
+  word3: string;
+  word4: string;
+  word5: string;
+  word6: string;
+  word7: string;
+  backgroundColor: string;
+  mutedTextColor: string;
+  activeTextColor: string;
+  scale: number;
+  animationSpeed: number;
+  cycleFrames: number;
+  fontSize: number;
+  lineSpacing: number;
+  curveIntensity: number;
+  blurAmount: number;
+}
+
+export const defaultSentenceRevealProps: SentenceRevealProps = {
+  word1: "ui-design-system",
+  word2: "interface-design",
+  word3: "swiftui-ui-patterns",
+  word4: "interaction-design",
+  word5: "ui-ux-pro-max",
+  word6: "web-design-guidelines",
+  word7: "frontend-design",
+  backgroundColor: "#fcfcfc",
+  mutedTextColor: "#999999",
+  activeTextColor: "#1a1a1a",
+  scale: 1.1,
+  animationSpeed: 1,
+  cycleFrames: 45,
+  fontSize: 0.045,
+  lineSpacing: 2.2,
+  curveIntensity: 280,
+  blurAmount: 8,
 };
 
-function Scene(props: any) {
+const CinemaBackground: React.FC<{ color: string }> = ({ color }) => (
+  <AbsoluteFill style={{ backgroundColor: color }}>
+    <div style={{
+      position: 'absolute',
+      inset: 0,
+      background: 'radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.03) 100%)',
+    }} />
+    <div style={{
+      position: 'absolute',
+      inset: 0,
+      opacity: 0.04,
+      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+    }} />
+  </AbsoluteFill>
+);
+
+export const Scene: React.FC<SentenceRevealProps> = (props) => {
+  const p = { ...defaultSentenceRevealProps, ...props };
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   
   const minDim = Math.min(width, height);
-  const speed = (props.animationSpeed ?? SCENE_PARAMS.animationSpeed.value);
-  const adjustedFrame = frame * speed;
-  const cycleFrames = (props.cycleFrames ?? SCENE_PARAMS.cycleFrames.value);
+  const adjustedFrame = frame * p.animationSpeed;
   
-  const words = [
-    (props.word1 ?? SCENE_PARAMS.word1.value),
-    (props.word2 ?? SCENE_PARAMS.word2.value),
-    (props.word3 ?? SCENE_PARAMS.word3.value),
-    (props.word4 ?? SCENE_PARAMS.word4.value),
-    (props.word5 ?? SCENE_PARAMS.word5.value),
-    (props.word6 ?? SCENE_PARAMS.word6.value),
-    (props.word7 ?? SCENE_PARAMS.word7.value),
-  ].filter(function(w) { return w.trim(); });
-  
+  const words = [p.word1, p.word2, p.word3, p.word4, p.word5, p.word6, p.word7].filter(w => w?.trim());
   const totalWords = words.length;
   
-  const currentActiveIndex = Math.floor(adjustedFrame / cycleFrames) % totalWords;
-  const frameInCycle = adjustedFrame % cycleFrames;
+  const currentActiveIndex = Math.floor(adjustedFrame / p.cycleFrames) % totalWords;
+  const frameInCycle = adjustedFrame % p.cycleFrames;
   
-  const fontSize = minDim * (props.fontSize ?? SCENE_PARAMS.fontSize.value);
-  const lineHeight = fontSize * (props.lineSpacing ?? SCENE_PARAMS.lineSpacing.value);
-  const curveIntensity = (props.curveIntensity ?? SCENE_PARAMS.curveIntensity.value);
-  const blurAmount = (props.blurAmount ?? SCENE_PARAMS.blurAmount.value);
+  const fontSize = minDim * p.fontSize;
+  const lineHeight = fontSize * p.lineSpacing;
   
-  const entranceProgress = spring({
+  const entrance = spring({
     frame: adjustedFrame,
-    fps: fps,
-    config: { damping: 25, stiffness: 80 }
+    fps,
+    config: { damping: 20, stiffness: 100 }
   });
-  const containerOpacity = interpolate(entranceProgress, [0, 1], [0, 1]);
-  
+
   const centerSlotIndex = Math.floor(totalWords / 2);
+  const transitionPhase = frameInCycle / p.cycleFrames;
   
-  var getWordAtSlot = function(slotIndex: number) {
-    var offset = (currentActiveIndex - centerSlotIndex + totalWords) % totalWords;
-    return (slotIndex + offset) % totalWords;
-  };
-  
-  var transitionPhase = frameInCycle / cycleFrames;
-  
-  var smoothTransition = interpolate(
+  const smoothTransition = interpolate(
     transitionPhase,
-    [0, 0.3, 0.5, 0.7, 1],
-    [0, 0, 0.5, 1, 1],
-    { extrapolateRight: "clamp" }
+    [0, 0.4, 0.6, 1],
+    [0, 0, 1, 1],
+    { easing: Easing.bezier(0.45, 0, 0.55, 1) }
   );
   
-  var slots = [];
-  for (var i = 0; i < totalWords; i++) {
-    var currentWordIndex = getWordAtSlot(i);
-    var nextWordIndex = (currentWordIndex + 1) % totalWords;
-    
-    var isActiveSlot = i === centerSlotIndex;
-    
-    var distanceFromCenter = i - centerSlotIndex;
-    var normalizedDistance = distanceFromCenter / (totalWords / 2);
-    
-    // Aggressive curve to the LEFT - top and bottom words touch left edge
-    var horizontalOffset = -Math.pow(Math.abs(normalizedDistance), 1.2) * curveIntensity;
-    
-    var currentWord = words[currentWordIndex];
-    var nextWord = words[nextWordIndex];
-    
-    var exitOpacity = interpolate(smoothTransition, [0, 0.5], [1, 0], { extrapolateRight: "clamp" });
-    var enterOpacity = interpolate(smoothTransition, [0.5, 1], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-    
-    var exitBlur = interpolate(smoothTransition, [0, 0.5], [0, blurAmount], { extrapolateRight: "clamp" });
-    var enterBlur = interpolate(smoothTransition, [0.5, 1], [blurAmount, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-    
-    var exitY = interpolate(smoothTransition, [0, 0.5], [0, -lineHeight * 0.3], { extrapolateRight: "clamp" });
-    var enterY = interpolate(smoothTransition, [0.5, 1], [lineHeight * 0.3, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-    
-    slots.push({
-      slotIndex: i,
-      currentWord: currentWord,
-      nextWord: nextWord,
-      isActiveSlot: isActiveSlot,
-      horizontalOffset: horizontalOffset,
-      exitOpacity: exitOpacity,
-      enterOpacity: enterOpacity,
-      exitBlur: exitBlur,
-      enterBlur: enterBlur,
-      exitY: exitY,
-      enterY: enterY,
-      distanceFromCenter: Math.abs(distanceFromCenter),
-    });
-  }
-  
-  var baseOpacities = [0.25, 0.4, 0.6, 1, 0.6, 0.4, 0.25];
-  
-  return React.createElement(
-    AbsoluteFill,
-    { 
-      style: { 
-        backgroundColor: (props.backgroundColor ?? SCENE_PARAMS.backgroundColor.value), 
-        justifyContent: "center", 
+  const baseOpacities = [0.15, 0.35, 0.6, 1, 0.6, 0.35, 0.15];
+
+  return (
+    <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", overflow: "hidden" }}>
+      <CinemaBackground color={p.backgroundColor} />
+
+      <div style={{
+        transform: `scale(${p.scale * entrance})`,
+        opacity: entrance,
+        display: "flex",
+        flexDirection: "column",
         alignItems: "center",
-        overflow: "hidden",
-      }
-    },
-    React.createElement(
-      "div",
-      {
-        style: {
-          transform: "scale(" + (props.scale ?? SCENE_PARAMS.scale.value) + ")",
-          transformOrigin: "center center",
-          opacity: containerOpacity,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          position: "relative",
-          width: "100%",
-        }
-      },
-      slots.map(function(slot, idx) {
-        var slotOpacity = baseOpacities[idx] || 0.3;
-        if (slot.isActiveSlot) slotOpacity = 1;
-        
-        return React.createElement(
-          "div",
-          {
-            key: slot.slotIndex,
-            style: {
+        width: "100%",
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }}>
+        {Array.from({ length: totalWords }).map((_, i) => {
+          const offset = (currentActiveIndex - centerSlotIndex + totalWords) % totalWords;
+          const currentWordIndex = (i + offset) % totalWords;
+          const nextWordIndex = (currentWordIndex + 1) % totalWords;
+          
+          const isActive = i === centerSlotIndex;
+          const dist = i - centerSlotIndex;
+          const normalizedDist = dist / (totalWords / 2);
+          const horizontalOffset = -Math.pow(Math.abs(normalizedDist), 1.3) * p.curveIntensity;
+          
+          const slotOpacity = baseOpacities[i] || 0.2;
+          
+          return (
+            <div key={i} style={{
               position: "relative",
               height: lineHeight,
-              transform: "translateX(" + slot.horizontalOffset + "px)",
+              transform: `translateX(${horizontalOffset}px)`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-            }
-          },
-          React.createElement(
-            "span",
-            {
-              style: {
-                fontFamily: (props.fontFamily ?? SCENE_PARAMS.fontFamily.value) + ", system-ui, sans-serif",
+            }}>
+              {/* Exit Word */}
+              <span style={{
                 fontSize: fontSize,
-                fontWeight: slot.isActiveSlot ? 700 : 400,
-                color: slot.isActiveSlot ? (props.activeTextColor ?? SCENE_PARAMS.activeTextColor.value) : (props.mutedTextColor ?? SCENE_PARAMS.mutedTextColor.value),
-                opacity: slot.exitOpacity * slotOpacity,
+                fontWeight: isActive ? 800 : 500,
+                color: isActive ? p.activeTextColor : p.mutedTextColor,
+                opacity: (1 - smoothTransition) * (isActive ? 1 : slotOpacity),
                 position: "absolute",
                 whiteSpace: "nowrap",
-                filter: "blur(" + slot.exitBlur + "px)",
-                transform: "translateY(" + slot.exitY + "px)",
-              }
-            },
-            slot.currentWord
-          ),
-          React.createElement(
-            "span",
-            {
-              style: {
-                fontFamily: (props.fontFamily ?? SCENE_PARAMS.fontFamily.value) + ", system-ui, sans-serif",
+                filter: `blur(${interpolate(smoothTransition, [0, 1], [0, p.blurAmount])}px)`,
+                transform: `translateY(${interpolate(smoothTransition, [0, 1], [0, -lineHeight * 0.5])}px)`,
+                letterSpacing: interpolate(smoothTransition, [0, 1], [0, 10]),
+              }}>
+                {words[currentWordIndex]}
+              </span>
+
+              {/* Enter Word */}
+              <span style={{
                 fontSize: fontSize,
-                fontWeight: slot.isActiveSlot ? 700 : 400,
-                color: slot.isActiveSlot ? (props.activeTextColor ?? SCENE_PARAMS.activeTextColor.value) : (props.mutedTextColor ?? SCENE_PARAMS.mutedTextColor.value),
-                opacity: slot.enterOpacity * slotOpacity,
+                fontWeight: isActive ? 800 : 500,
+                color: isActive ? p.activeTextColor : p.mutedTextColor,
+                opacity: smoothTransition * (isActive ? 1 : slotOpacity),
                 position: "absolute",
                 whiteSpace: "nowrap",
-                filter: "blur(" + slot.enterBlur + "px)",
-                transform: "translateY(" + slot.enterY + "px)",
-              }
-            },
-            slot.nextWord
-          )
-        );
-      })
-    )
+                filter: `blur(${interpolate(smoothTransition, [0, 1], [p.blurAmount, 0])}px)`,
+                transform: `translateY(${interpolate(smoothTransition, [0, 1], [lineHeight * 0.5, 0])}px)`,
+                letterSpacing: interpolate(smoothTransition, [0, 1], [10, 0]),
+              }}>
+                {words[nextWordIndex]}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </AbsoluteFill>
   );
-}
+};
 
 export default Scene;
